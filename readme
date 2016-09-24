@@ -1,4 +1,8 @@
-# 这是一个爬虫的示例程序
+# 这是一个爬虫的示例程序,抓取某个网站的导航栏
 
 # 使用框架 webmagic 
+# 使用maven 管理依赖
 # http://webmagic.io/docs/zh/ 
+
+#相关技术参考
+#http://note.youdao.com/noteshare?id=6563417a32e197285f9e466c9cec5232
