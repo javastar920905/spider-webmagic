@@ -1,6 +1,5 @@
 package com.javastar920905.spider.pageprocessor;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.management.JMException;
@@ -11,43 +10,39 @@ import us.codecraft.webmagic.Spider;
 import us.codecraft.webmagic.monitor.SpiderMonitor;
 import us.codecraft.webmagic.pipeline.JsonFilePipeline;
 import us.codecraft.webmagic.processor.PageProcessor;
+import us.codecraft.webmagic.selector.Html;
+import us.codecraft.webmagic.selector.Selectable;
 
 public class WebmgicPageProcessor implements PageProcessor {
-	private Site site=Site.me().setRetryTimes(3).setRetrySleepTime(5);
+  private Site site = Site.me().setRetryTimes(3).setRetrySleepTime(5);
 
-	public Site getSite() {
-		return site;
-	}
+  public Site getSite() {
+    return site;
+  }
 
-	public void process(Page page) {
-		//这里主要是对xpath 的要求较高
-		List<String> sumarry=page.getHtml().xpath("/html/body/div/div/ul/li//a/text()").all();
-		for (String s:sumarry) {
-			System.out.println(s);
-		}
-		page.putField("summary", sumarry);
-		
-		//添加另外的请求地址 ,会多调用两次该抓取方法,只是请求页面不同而已
-		List<String> urlList=new ArrayList<>();
-		urlList.add("http://webmagic.io/docs/zh/posts/ch1-overview/README.html");
-		urlList.add("http://webmagic.io/docs/zh/posts/ch2-install/README.html");
-		page.addTargetRequests(urlList);
+  public void process(Page page) {
+    // 这里主要是对xpath 的要求较高
+    Html html = page.getHtml();// 获取当前页面
+    Selectable rows=html.css(".summary li a");//获取一个列表
+    page.putField("summary", rows.xpath("a/text()").all()); //获取列表中所有a标签中的内容
+    page.putField("links",rows.$("a","href").all()); //获取所有a标签的href属性, 返回一个list<String>
+  }
 
-	}
-	
-	public static void main(String[] args) {
-		//获取当前网站的所有title  并输出到文件,每次抓取会覆盖掉原来的文件
-		Spider webMagicIOSpider= Spider.create(new WebmgicPageProcessor()).addUrl("http://webmagic.io/docs/zh/")
-		.addPipeline(new JsonFilePipeline("D:/eclipse_workspace/webmgicData/")).thread(5);
-		
-		try {
-			//添加扒取数量监控
-			SpiderMonitor.instance().register(webMagicIOSpider);
-		} catch (JMException e) {
-			e.printStackTrace();
-		}
-		webMagicIOSpider.start();
-		
-	}
+
+  public static void main(String[] args) {
+    // 获取当前网站的所有title 并输出到文件,每次抓取会覆盖掉原来的文件
+    Spider webMagicIOSpider =
+        Spider.create(new WebmgicPageProcessor()).addUrl("http://webmagic.io/docs/zh/")
+            .addPipeline(new JsonFilePipeline("D:/webmgicData/")).thread(5);
+
+    try {
+      // 添加扒取数量监控
+      SpiderMonitor.instance().register(webMagicIOSpider);
+    } catch (JMException e) {
+      e.printStackTrace();
+    }
+    webMagicIOSpider.start();
+
+  }
 
 }
