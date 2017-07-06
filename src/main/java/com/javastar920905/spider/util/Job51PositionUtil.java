@@ -35,18 +35,46 @@ public class Job51PositionUtil {
    *
    * 发现只有末尾的2,*.html 会产生变化,所以我们可以for循环生成 PageSize(获取分页数 )*每页显示条目的url
    *
-   * (51job有2000页职位(而且只显示最新的2000页),一次性扒取不完,需要记录扒取的当前页数)
-   *
+   * 
+   * 
+   * 获取所有职位: 根据 地区+行业 (深圳+计算机软件行业的所有公司的职位) 结果只有1314页, 所以生成url方案为:
+   * 
+   * 第1批分页列表 =地区[di]+行业[hi~hn] +分页数  ...
+   * 
+   * 第dn批分页列表=地区[dn]+行业[hi~hn] +分页数
+   * 
+   * dn=地区number的数组的长度 hn=行业数组的长度
+   * 
    * @param html
    * @return
    */
-  protected List<String> getUrls(Html html) {
+  protected List<String> getUrls(Html html, String currentCityNum) {
     int pageSize = getPageSize(html);
-    int i = 2;
+    int pageNum = 2;
     // 第一页已经在request中请求了,<=pageSize页需要请求
     List<String> urls = new LinkedList();
-    for (; i <= pageSize; i++) {
-      urls.add(pageUrl + i + pageUrl_suffix);
+
+    // 生成请求列表[(地区i~行业n),(地区i+1,行业1)]
+    int areaIndex = 0;
+    boolean canExit = false;
+    for (; areaIndex < areaValueData.length; areaIndex++) {
+      if (areaValueData[areaIndex].equals(currentCityNum)) {
+        for (String industryNum : industryData) {
+          for (; pageNum <= pageSize; pageNum++) {
+            urls.add("http://search.51job.com/list/" + currentCityNum + ",000000,0000,"
+                + industryNum + ",9,99,%2B,1," + pageNum + pageUrl_suffix);
+          }
+        }
+        canExit = true;// 可以终止最外层循环了
+      } else {
+        if (canExit) {
+          break;
+        }
+      }
+    }
+    if (areaIndex < areaValueData.length) {
+      urls.add("http://search.51job.com/list/" + areaValueData[areaIndex + 1] + ",000000,0000,"
+          + industryData[0] + ",9,99,%2B,1," + 1 + pageUrl_suffix);
     }
     return urls;
   }

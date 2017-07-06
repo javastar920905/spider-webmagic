@@ -28,12 +28,23 @@ import us.codecraft.webmagic.selector.Html;
 public class Job51PositionPageProcessor extends Job51PositionUtil implements PageProcessor {
   // 部分一：抓取网站的相关配置，包括编码、抓取间隔、重试次数等
   private Site site = Site.me();
+  private static String historyAreaNumber;
+
+  private static String getCurrentAreaNumber(String url) {
+    if (url == null) {
+      return null;
+    }
+    String currentAreaNumber = url.substring(url.lastIndexOf("/") + 1, url.indexOf(","));
+    System.out.println(currentAreaNumber + " ===================>  :" + historyAreaNumber);
+    return currentAreaNumber;
+  }
+
 
 
   // process是定制爬虫逻辑的核心接口，在这里编写抽取逻辑
   public void process(Page page) {
     // 部分二：定义如何抽取页面信息，并保存下来
-    Request initRequest = page.getRequest();
+    Request request = page.getRequest();
     Html html = page.getHtml();
 
     // positionlistBox
@@ -74,7 +85,10 @@ public class Job51PositionPageProcessor extends Job51PositionUtil implements Pag
 
 
     // 部分三：从页面发现后续的url地址来抓取
-    // page.addTargetRequests(getUrls(html));
+    String currentNum = getCurrentAreaNumber(request.getUrl());
+    if (currentNum != null && !currentNum.equals(historyAreaNumber))
+      historyAreaNumber = currentNum;
+    page.addTargetRequests(getUrls(html, currentNum));
   }
 
 
@@ -85,19 +99,18 @@ public class Job51PositionPageProcessor extends Job51PositionUtil implements Pag
 
 
   public static void main(String[] args) {
-    // 发起页面请求,开启5个线程并启动爬虫
-    // 输出到文件,每次抓取会覆盖掉原来的文件
+    // 发起页面请求,开启5个线程并启动爬虫 // 输出到文件,每次抓取会覆盖掉原来的文件
     Spider webMagicIOSpider =
         Spider.create(new Job51PositionPageProcessor()).addRequest(getRequest(fistPositionPage))
             .addPipeline(new JsonFilePipeline("D:/webmgicData/")).addPipeline(new RedisPipeLine())
             .thread(5);
 
-    try {
-      // 添加扒取数量监控
+    try { // 添加扒取数量监控
       SpiderMonitor.instance().register(webMagicIOSpider);
     } catch (JMException e) {
       e.printStackTrace();
     }
     webMagicIOSpider.start();
   }
+
 }
