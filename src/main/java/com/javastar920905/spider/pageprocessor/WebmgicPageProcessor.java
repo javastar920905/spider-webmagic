@@ -1,7 +1,5 @@
 package com.javastar920905.spider.pageprocessor;
 
-import java.util.List;
-
 import javax.management.JMException;
 
 import us.codecraft.webmagic.Page;

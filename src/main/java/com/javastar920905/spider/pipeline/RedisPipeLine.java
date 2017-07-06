@@ -13,6 +13,7 @@ public class RedisPipeLine implements Pipeline {
   // 一个页面请求完成触发一次
   public void process(ResultItems resultItems, Task task) {
 
+    //将请求发送到消息队列,空闲时处理
     for (Map.Entry<String, Object> entry : resultItems.getAll().entrySet()) {
       System.out.println(entry.getKey() + ":\t" + entry.getValue());
     }
