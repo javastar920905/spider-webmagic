@@ -1,4 +1,7 @@
-# 这是一个爬虫的示例程序,抓取某个网站的导航栏
+# 这是一个爬虫的示例程序
+WebmgicPageProcessor.java ,抓取某个网站的导航栏
+Job51PositionPageProcessor.java 抓取51job.com的所有职位(也许只是近2个月的)
+
 
 # 使用框架 webmagic 
 # 使用maven 管理依赖
@@ -6,3 +9,5 @@
 
 #相关技术参考
 #http://note.youdao.com/noteshare?id=6563417a32e197285f9e466c9cec5232
+# 51job 职位分页扒取探索笔记
+http://note.youdao.com/noteshare?id=a994a3e900967bb4945507e89b99f185&sub=DA60FDE66BCF4CBDA99201D7A53B1D23
