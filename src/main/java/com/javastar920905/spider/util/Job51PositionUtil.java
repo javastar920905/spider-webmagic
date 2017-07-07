@@ -58,7 +58,7 @@ public class Job51PositionUtil extends CommonUtil {
     for (; areaIndex < areaValueData.length; areaIndex++) {
       if (areaValueData[areaIndex].equals(currentCityNum)) {
         for (String industryNum : industryData) {
-          for (; pageNum <= 3; pageNum++) {
+          for (; pageNum <= pageSize; pageNum++) {
             urls.add("http://search.51job.com/list/" + currentCityNum + ",000000,0000,"
                 + industryNum + ",9,99,%2B,1," + pageNum + pageUrl_suffix);
           }
