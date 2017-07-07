@@ -29,8 +29,13 @@ public class RedisPipeLine extends RedisOpsUtil implements Pipeline {
         for (Object positionObj : jsonArray) {
           String positionString = JSONObject.toJSONString(positionObj);
           JSONObject positionJson = JSONObject.parseObject(positionString);
-          connection.hSet(KEY_JOB51_POSITION.getBytes(),
-              positionJson.getString("positionId").getBytes(), positionString.getBytes());
+          byte[] positionId = positionJson.getString("positionId").getBytes();
+          byte[] positionLink = positionJson.getString("positionLink").getBytes();
+          byte[] companyName = positionJson.getString("companyName").getBytes();
+          byte[] companyLink = positionJson.getString("companyLink").getBytes();
+          connection.hSet(KEY_JOB51_POSITION.getBytes(), positionId, positionString.getBytes());
+          connection.hSet(KEY_JOB51_POSITION_LINK.getBytes(), positionId, positionLink);
+          connection.hSet(KEY_JOB51_COMPANY_LINK.getBytes(), companyName, companyLink);
         }
       }
     } catch (Exception e) {

@@ -37,7 +37,7 @@ public class AppConfig {
     // 发起页面请求,开启5个线程并启动爬虫 // 输出到文件,每次抓取会覆盖掉原来的文件
     // .addPipeline(new JsonFilePipeline("D:/webmgicData/"))
     Spider webMagicIOSpider = Spider.create(new Job51PositionPageProcessor())
-        .setScheduler(new FileCacheQueueScheduler("D:/webmgicData/cache")) // 使用文件保存抓取URL，可以在关闭程序并下次启动时，从之前抓取到的URL继续抓取
+       // .setScheduler(new FileCacheQueueScheduler("D:/webmgicData/cache")) // 使用文件保存抓取URL，可以在关闭程序并下次启动时，从之前抓取到的URL继续抓取
         .setScheduler(new RedisScheduler(RedisConfig.Host)).addRequest(getRequest(fistPositionPage))
         .addPipeline(new RedisPipeLine()).thread(5);
 

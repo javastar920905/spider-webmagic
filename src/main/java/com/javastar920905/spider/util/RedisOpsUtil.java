@@ -16,6 +16,8 @@ import com.alibaba.fastjson.JSONObject;
  */
 public class RedisOpsUtil {
   public static final String KEY_JOB51_POSITION = "spider:job51:position";
+  public static final String KEY_JOB51_POSITION_LINK = "spider:job51:position:link";
+  public static final String KEY_JOB51_COMPANY_LINK = "spider:job51:position:companylink";
 
   public static RedisTemplate redisTemplate = SpringContextUtil.getBean(RedisTemplate.class);
   // 字符串操作
