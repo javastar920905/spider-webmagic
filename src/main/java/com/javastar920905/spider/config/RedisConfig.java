@@ -15,6 +15,8 @@ import redis.clients.jedis.JedisPoolConfig;
 @Configuration
 @Import(SpringContextUtil.class)
 public class RedisConfig {
+  public static final String Host = "192.168.1.170";
+  public static final int port = 6379;
 
 
   @Bean
@@ -22,8 +24,8 @@ public class RedisConfig {
     JedisConnectionFactory factory = new JedisConnectionFactory();
     factory.setUsePool(true);
     factory.setPoolConfig(new JedisPoolConfig());
-    factory.setHostName("192.168.1.170");
-    factory.setPort(6379);
+    factory.setHostName(Host);
+    factory.setPort(port);
     return factory;
   }
 

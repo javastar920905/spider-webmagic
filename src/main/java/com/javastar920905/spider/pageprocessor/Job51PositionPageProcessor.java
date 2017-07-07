@@ -2,14 +2,14 @@ package com.javastar920905.spider.pageprocessor;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.javastar920905.spider.util.CommonUtil;
 import com.javastar920905.spider.util.Job51PositionUtil;
 
-import com.javastar920905.spider.util.SpiderUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import us.codecraft.webmagic.Page;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
@@ -32,7 +32,8 @@ public class Job51PositionPageProcessor extends Job51PositionUtil implements Pag
       return null;
     }
     String currentAreaNumber = url.substring(url.lastIndexOf("/") + 1, url.indexOf(","));
-    LOGGER.info(currentAreaNumber + " ===================>  :" + historyAreaNumber);
+    LOGGER.debug("线程名称:{} ===================> 历史url地区编号:{}, 当前地区编号:{}",
+        Thread.currentThread().getName(), historyAreaNumber, currentAreaNumber);
     return currentAreaNumber;
   }
 
@@ -41,32 +42,27 @@ public class Job51PositionPageProcessor extends Job51PositionUtil implements Pag
   // process是定制爬虫逻辑的核心接口，在这里编写抽取逻辑
   @Override
   public void process(Page page) {
-    LOGGER.info("spider 线程是否存活:{}, 线程名称:{}", SpiderUtil.webMagicIOSpider.getThreadAlive(),
-        Thread.currentThread().getName());
     // 部分二：定义如何抽取页面信息，并保存下来
     Request request = page.getRequest();
     Html html = page.getHtml();
+    // 职位列表css定位
+    String parentCss = "#resultList .el ";
+    // 职位信息获取 (这里有多少个字段就相当于有多少个数组)
+    List<String> positionIdList = html.$(parentCss + ".t1 input", "value").all(); // id
+    List<String> positionNameList = html.css(parentCss + ".t1 span a").xpath("a/text()").all(); // 职位名
+    List<String> positionLinkList = html.css(parentCss + ".t1 span a").links().all();
+    List<String> companyNameList = html.css(parentCss + ".t2 a").xpath("a/text()").all(); // 公司名
+    List<String> companyLinkList = html.css(parentCss + ".t2 a").links().all();
+    List<String> workPlaceList =
+        html.css(parentCss + ".t3:not(.title .t3)").xpath("span/text()").all();
+    List<String> salaryList =
+        html.css(parentCss + ".t4:not(.title .t4)").xpath("span/text()").all();
+    List<String> publishDateList =
+        html.css(parentCss + " .t5:not(.title .t5)").xpath("span/text()").all();
 
+    JSONArray positionJsonArray = new JSONArray();
+    int i = 0;
     try {
-      // positionlistBox
-      String parentCss = "#resultList .el ";
-
-      // 职位信息获取 (这里有多少个字段就相当于有多少个数组)
-      List<String> positionIdList = html.$(parentCss + ".t1 input", "value").all(); // id
-      List<String> positionNameList = html.css(parentCss + ".t1 span a").xpath("a/text()").all(); // 职位名
-      List<String> positionLinkList = html.css(parentCss + ".t1 span a").links().all();
-      List<String> companyNameList = html.css(parentCss + ".t2 a").xpath("a/text()").all(); // 公司名
-      List<String> companyLinkList = html.css(parentCss + ".t2 a").links().all();
-      List<String> workPlaceList =
-          html.css(parentCss + ".t3:not(.title .t3)").xpath("span/text()").all();
-      List<String> salaryList =
-          html.css(parentCss + ".t4:not(.title .t4)").xpath("span/text()").all();
-      List<String> publishDateList =
-          html.css(parentCss + " .t5:not(.title .t5)").xpath("span/text()").all();
-
-
-      JSONArray positionJsonArray = new JSONArray();
-      int i = 0;
       if (positionIdList != null) {
         for (; i < positionIdList.size(); i++) {
           JSONObject json = new JSONObject();
@@ -97,7 +93,7 @@ public class Job51PositionPageProcessor extends Job51PositionUtil implements Pag
       }
 
     } catch (Exception e) {
-      e.printStackTrace();
+      LOGGER.error("获取页面失败 {}", request.getUrl(), e);
     }
   }
 
