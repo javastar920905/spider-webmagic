@@ -10,10 +10,10 @@ import us.codecraft.webmagic.selector.Html;
  * 
  * 51job 职位列表url
  */
-public class Job51PositionUtil {
+public class Job51PositionUtil extends CommonUtil {
   // <editor-fold desc="定义需要扒取的 url">
   public static String firstArea = "010000";// 北京地区
-  public static String firstIndustry = "00";// 计算机软件行业
+  public static String firstIndustry = "01";// 计算机软件行业
   // 从北京地区+计算机软件行业 开始扒取
   public static String pageUrl = "http://search.51job.com/list/" + firstArea + ",000000,0000,"
       + firstIndustry + ",9,99,%2B,1,";
@@ -22,8 +22,6 @@ public class Job51PositionUtil {
       "?lang=c&stype=1&postchannel=0000&workyear=99&cotype=99&degreefrom=99&jobterm=99&companysize=99&lonlat=0%2C0&radius=-1&ord_field=1&confirmdate=9&fromType=1&dibiaoid=0&address=&line=&specialarea=00&from=&welfare=";
   public static String pageUrl_suffix = ".html" + queryString;
   public static final String fistPositionPage = pageUrl + 1 + pageUrl_suffix;
-  public static String userAgent =
-      "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36";
   // </editor-fold>
 
 
@@ -39,7 +37,7 @@ public class Job51PositionUtil {
    * 
    * 获取所有职位: 根据 地区+行业 (深圳+计算机软件行业的所有公司的职位) 结果只有1314页, 所以生成url方案为:
    * 
-   * 第1批分页列表 =地区[di]+行业[hi~hn] +分页数  ...
+   * 第1批分页列表 =地区[di]+行业[hi~hn] +分页数 ...
    * 
    * 第dn批分页列表=地区[dn]+行业[hi~hn] +分页数
    * 
@@ -73,7 +71,8 @@ public class Job51PositionUtil {
       }
     }
     if (areaIndex < areaValueData.length) {
-      urls.add("http://search.51job.com/list/" + areaValueData[areaIndex + 1] + ",000000,0000,"
+      // 退出循环时areaIndex已经+1了
+      urls.add("http://search.51job.com/list/" + areaValueData[areaIndex] + ",000000,0000,"
           + industryData[0] + ",9,99,%2B,1," + 1 + pageUrl_suffix);
     }
     return urls;
