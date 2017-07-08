@@ -119,7 +119,7 @@ public class Job51PositionListPageProcessor extends Job51PositionUtil implements
       }
 
       // 部分三: 如果启动时设置了pipeline 就需要到指定类处理抓取后的结果
-      page.putField("positionJsonArray", positionJsonArray);
+      page.putField(RESULT, positionJsonArray);
 
 
       // 部分四：从页面发现后续的url地址来抓取

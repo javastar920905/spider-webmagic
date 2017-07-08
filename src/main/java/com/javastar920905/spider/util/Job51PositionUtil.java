@@ -1,21 +1,17 @@
 package com.javastar920905.spider.util;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
+import static com.javastar920905.spider.util.RedisOpsUtil.closeRedisConnection;
+import static com.javastar920905.spider.util.RedisOpsUtil.getRedisConnection;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import com.alibaba.fastjson.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.RedisConnection;
-import us.codecraft.webmagic.selector.Html;
 
-import static com.javastar920905.spider.util.RedisOpsUtil.closeRedisConnection;
-import static com.javastar920905.spider.util.RedisOpsUtil.getRedisConnection;
+import us.codecraft.webmagic.selector.Html;
 
 /**
  * Created by ouzhx on 2017/7/6.
@@ -24,6 +20,29 @@ import static com.javastar920905.spider.util.RedisOpsUtil.getRedisConnection;
  */
 public class Job51PositionUtil extends SpiderUtil {
   private static final Logger LOGGER = LoggerFactory.getLogger(Job51PositionUtil.class);
+
+  protected static class Company {
+    public static final String fistPage = "http://jobs.51job.com/all/co2812476.html";
+
+    // 从redis中获取已有url列表
+    public static List<String> getUrls() {
+      List<String> urls = null;
+      // 将请求发送到消息队列,空闲时处理
+      RedisConnection connection = null;
+      try {
+        connection = getRedisConnection();
+        Map<byte[], byte[]> positionUrlMap =
+            connection.hGetAll(RedisOpsUtil.KEY_JOB51_COMPANY_LINK);
+        urls = CollectionUtil.getStringList(positionUrlMap.values());
+      } catch (Exception e) {
+        closeRedisConnection(connection);
+        LOGGER.error("获取公司url列表失败!", e);
+      } finally {
+        closeRedisConnection(connection);
+      }
+      return urls;
+    }
+  }
 
   protected static class Position {
     public static final String fistPage = "http://jobs.51job.com/dalian/80993878.html?s=01&t=0";
@@ -36,7 +55,7 @@ public class Job51PositionUtil extends SpiderUtil {
       try {
         connection = getRedisConnection();
         Map<byte[], byte[]> positionUrlMap =
-            connection.hGetAll(RedisOpsUtil.KEY_JOB51_POSITION_LINK.getBytes());
+            connection.hGetAll(RedisOpsUtil.KEY_JOB51_POSITION_LINK);
         urls = CollectionUtil.getStringList(positionUrlMap.values());
       } catch (Exception e) {
         closeRedisConnection(connection);

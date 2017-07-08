@@ -16,8 +16,8 @@ import static com.javastar920905.spider.util.StringUtil.RESULT;
 /**
  * Created by ouzhx on 2017/7/5.
  */
-public class RedisJob51PositionPipeLine extends RedisOpsUtil implements Pipeline {
-  private static final Logger LOGGER = LoggerFactory.getLogger(RedisJob51PositionPipeLine.class);
+public class RedisJob51CompanyPipeLine extends RedisOpsUtil implements Pipeline {
+  private static final Logger LOGGER = LoggerFactory.getLogger(RedisJob51CompanyPipeLine.class);
 
   // 一个页面请求完成触发一次
   public void process(ResultItems resultItems, Task task) {
@@ -25,11 +25,11 @@ public class RedisJob51PositionPipeLine extends RedisOpsUtil implements Pipeline
     RedisConnection connection = null;
     try {
       connection = getRedisConnection();
-      JSONObject positionJson = resultItems.get(RESULT);
-      if (positionJson != null) {
-        byte[] positionId = positionJson.getString("positionId").getBytes();
-        connection.hSet(KEY_JOB51_POSITION_DETAIL, positionId,
-            positionJson.toJSONString().getBytes());
+      JSONObject companyJson = resultItems.get(RESULT);
+      if (companyJson != null) {
+        byte[] positionId = companyJson.getString("companyId").getBytes();
+        connection.hSet(KEY_JOB51_COMPANY_DETAIL, positionId,
+            companyJson.toJSONString().getBytes());
       }
     } catch (Exception e) {
       closeRedisConnection(connection);

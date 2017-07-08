@@ -1,8 +1,5 @@
 package com.javastar920905.spider.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.Spider;
@@ -10,7 +7,7 @@ import us.codecraft.webmagic.Spider;
 /**
  * Created by ouzhx on 2017/7/6.
  */
-public class SpiderUtil {
+public class SpiderUtil extends StringUtil {
   public static Spider currentWebMagicIOSpider;
 
   public static String userAgent =

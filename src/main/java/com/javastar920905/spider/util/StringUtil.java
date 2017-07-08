@@ -28,6 +28,8 @@ public class StringUtil extends StringUtils {
   // <editor-fold desc="预先定义的时间格式常量">
   public static final String SYMBOL = ",";
   public static final String EMPTY = "";
+  public static final String RESULT = "result";
+  public static final String MSG = "msg";
   public static final String LONG_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
   public static final String SHORT_DATE_FORMAT = "yyyy-MM-dd";
   public static final String UTF8_CHARSET = "UTF-8";

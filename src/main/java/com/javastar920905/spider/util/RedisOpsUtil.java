@@ -21,17 +21,18 @@ public class RedisOpsUtil {
   /**
    * 职位列表页要缓存的key
    */
-  public static final String KEY_JOB51_POSITION = "spider:job51:position";
-  public static final String KEY_JOB51_POSITION_LINK = "spider:job51:position:link";
-  public static final String KEY_JOB51_COMPANY_LINK = "spider:job51:position:companylink";
+  public static final byte[] KEY_JOB51_POSITION = "spider:job51:position".getBytes();
+  public static final byte[] KEY_JOB51_POSITION_LINK = "spider:job51:position:link".getBytes();
+  public static final byte[] KEY_JOB51_COMPANY_LINK =
+      "spider:job51:position:companylink".getBytes();
   /**
    * 职位详情key
    */
-  public static final String KEY_JOB51_POSITION_DETAIL = "spider:job51:position:detail";
+  public static final byte[] KEY_JOB51_POSITION_DETAIL = "spider:job51:position:detail".getBytes();
   /**
    * 公司详情key
    */
-  public static final String KEY_JOB51_COMPANY_DETAIL = "spider:job51:company:detail";
+  public static final byte[] KEY_JOB51_COMPANY_DETAIL = "spider:job51:company:detail".getBytes();
   private static final String PAGE_NUM = "pageNum";
 
 
