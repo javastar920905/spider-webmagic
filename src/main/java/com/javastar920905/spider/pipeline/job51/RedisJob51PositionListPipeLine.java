@@ -1,4 +1,4 @@
-package com.javastar920905.spider.pipeline;
+package com.javastar920905.spider.pipeline.job51;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -14,8 +14,8 @@ import us.codecraft.webmagic.pipeline.Pipeline;
 /**
  * Created by ouzhx on 2017/7/5.
  */
-public class RedisPipeLine extends RedisOpsUtil implements Pipeline {
-  private static final Logger LOGGER = LoggerFactory.getLogger(RedisPipeLine.class);
+public class RedisJob51PositionListPipeLine extends RedisOpsUtil implements Pipeline {
+  private static final Logger LOGGER = LoggerFactory.getLogger(RedisJob51PositionListPipeLine.class);
 
   // 一个页面请求完成触发一次
   public void process(ResultItems resultItems, Task task) {

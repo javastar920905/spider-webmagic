@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.javastar920905.spider.config.RedisConfig;
-import com.javastar920905.spider.pipeline.RedisPipeLine;
+import com.javastar920905.spider.pipeline.job51.RedisJob51PositionListPipeLine;
 import com.javastar920905.spider.util.SpiderUtil;
 import com.javastar920905.spider.util.SpringContextUtil;
 import org.slf4j.Logger;
@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.javastar920905.spider.util.CommonUtil;
 import com.javastar920905.spider.util.Job51PositionUtil;
 
 import org.springframework.context.ApplicationContext;
@@ -33,7 +32,8 @@ import javax.management.JMException;
  *
  */
 public class Job51PositionListPageProcessor extends Job51PositionUtil implements PageProcessor {
-  private static final Logger LOGGER = LoggerFactory.getLogger(Job51PositionListPageProcessor.class);
+  private static final Logger LOGGER =
+      LoggerFactory.getLogger(Job51PositionListPageProcessor.class);
   // 部分一：抓取网站的相关配置，包括编码、抓取间隔、重试次数等
   private Site site = Site.me();
   private static List<String> historyAreaNumber = new ArrayList<>();
@@ -50,16 +50,18 @@ public class Job51PositionListPageProcessor extends Job51PositionUtil implements
     // 发起页面请求,开启5个线程并启动爬虫 // 输出到文件,每次抓取会覆盖掉原来的文件
     // .addPipeline(new JsonFilePipeline("D:/webmgicData/"))
     Spider webMagicIOSpider = Spider.create(new Job51PositionListPageProcessor())
-        //.setScheduler(new FileCacheQueueScheduler("D:/webmgicData/cache")) // 使用文件保存抓取URL，可以在关闭程序并下次启动时，从之前抓取到的URL继续抓取
-        .setScheduler(new RedisScheduler(RedisConfig.Host)).addRequest(getRequest(fistPositionPage))
-        .addPipeline(new RedisPipeLine()).thread(5);
+        // .setScheduler(new FileCacheQueueScheduler("D:/webmgicData/cache")) //
+        // 使用文件保存抓取URL，可以在关闭程序并下次启动时，从之前抓取到的URL继续抓取(fileScheduler /redis 用一个即可)
+        .setScheduler(new RedisScheduler(RedisConfig.Host))
+        .addRequest(getRequest(PositionList.fistPage))
+        .addPipeline(new RedisJob51PositionListPipeLine()).thread(5);
 
     try { // 添加扒取数量监控
       SpiderMonitor.instance().register(webMagicIOSpider);
     } catch (JMException e) {
       e.printStackTrace();
     }
-    SpiderUtil.webMagicIOSpider = webMagicIOSpider;
+    SpiderUtil.currentWebMagicIOSpider = webMagicIOSpider;
     webMagicIOSpider.start();
   }
 
@@ -101,7 +103,8 @@ public class Job51PositionListPageProcessor extends Job51PositionUtil implements
     int i = 0;
     try {
       if (positionIdList != null) {
-        for (; i < positionIdList.size(); i++) {
+        int listSize = positionIdList.size();
+        for (; i < listSize; i++) {
           JSONObject json = new JSONObject();
           json.put("positionId", positionIdList.get(i));
           json.put("positionName", positionNameList.get(i));
@@ -115,19 +118,21 @@ public class Job51PositionListPageProcessor extends Job51PositionUtil implements
         }
       }
 
+      // 部分三: 如果启动时设置了pipeline 就需要到指定类处理抓取后的结果
       page.putField("positionJsonArray", positionJsonArray);
 
 
-      // 部分三：从页面发现后续的url地址来抓取
+      // 部分四：从页面发现后续的url地址来抓取
       String currentNum = getCurrentAreaNumber(request.getUrl());
       if (currentNum != null && !historyAreaNumber.contains(currentNum)) {
         synchronized (historyAreaNumber) {
           if (!historyAreaNumber.contains(currentNum)) {
             historyAreaNumber.add(currentNum);
-            page.addTargetRequests(getUrls(html, currentNum));
+            page.addTargetRequests(PositionList.getUrls(html, currentNum));
           }
         }
       }
+
 
     } catch (Exception e) {
       LOGGER.error("获取页面失败 {}", request.getUrl(), e);
@@ -136,7 +141,7 @@ public class Job51PositionListPageProcessor extends Job51PositionUtil implements
 
 
   public Site getSite() {
-    return CommonUtil.setSite(site);
+    return SpiderUtil.setSite(site);
   }
 
 
