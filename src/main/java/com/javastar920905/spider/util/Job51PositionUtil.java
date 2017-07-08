@@ -3,6 +3,8 @@ package com.javastar920905.spider.util;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import us.codecraft.webmagic.selector.Html;
 
 /**
@@ -11,6 +13,7 @@ import us.codecraft.webmagic.selector.Html;
  * 51job 职位列表url
  */
 public class Job51PositionUtil extends CommonUtil {
+  private static final Logger LOGGER = LoggerFactory.getLogger(Job51PositionUtil.class);
   // <editor-fold desc="定义需要扒取的 url">
   public static String firstArea = "010000";// 北京地区
   public static String firstIndustry = "01";// 计算机软件行业
@@ -71,9 +74,12 @@ public class Job51PositionUtil extends CommonUtil {
       }
     }
     if (areaIndex < areaValueData.length) {
+      String changeCityUrl = "http://search.51job.com/list/" + areaValueData[areaIndex]
+          + ",000000,0000," + industryData[0] + ",9,99,%2B,1," + 1 + pageUrl_suffix;
       // 退出循环时areaIndex已经+1了
-      urls.add("http://search.51job.com/list/" + areaValueData[areaIndex] + ",000000,0000,"
-          + industryData[0] + ",9,99,%2B,1," + 1 + pageUrl_suffix);
+      urls.add(changeCityUrl);
+      LOGGER.info(" 当前下标为{},对应城市为:{},列表最后一条url:为{} ", areaIndex, areaValueData[areaIndex],
+          changeCityUrl);
     }
     return urls;
   }
@@ -101,7 +107,7 @@ public class Job51PositionUtil extends CommonUtil {
 
   /* 51job所有地区编号 */
   private static final String[] areaValueData =
-      {"010000", "010100", "010200", "010300", "010400", "010500", "010600", "010700", "010800",
+         {"010000", "010100", "010200", "010300", "010400", "010500", "010600", "010700", "010800",
           "010900", "011000", "011100", "011200", "011300", "011400", "011500", "011600", "011700",
           "011800", "020000", "020100", "020200", "020300", "020400", "020500", "020600", "020700",
           "020800", "020900", "021000", "021100", "021200", "021300", "021400", "021500", "021600",

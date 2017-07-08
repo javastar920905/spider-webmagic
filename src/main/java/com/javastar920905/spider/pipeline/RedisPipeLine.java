@@ -2,7 +2,6 @@ package com.javastar920905.spider.pipeline;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.javastar920905.spider.pageprocessor.Job51PositionPageProcessor;
 import com.javastar920905.spider.util.RedisOpsUtil;
 
 import org.slf4j.Logger;
