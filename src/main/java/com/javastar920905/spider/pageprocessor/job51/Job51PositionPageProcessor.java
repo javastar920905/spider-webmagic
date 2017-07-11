@@ -6,6 +6,7 @@ import com.javastar920905.spider.pipeline.job51.RedisJob51PositionPipeLine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import com.alibaba.fastjson.JSONObject;
@@ -41,16 +42,17 @@ public class Job51PositionPageProcessor extends Job51PositionUtil implements Pag
 
   public static void main(String[] args) {
     // spring 容器加载redis
-    ApplicationContext context =
+    ConfigurableApplicationContext  context =
         new AnnotationConfigApplicationContext(SpiderUtil.class, RedisConfig.class);
 
-    // 启动spider 爬虫,没有托管给spring
     // 发起页面请求,开启5个线程并启动爬虫
     Spider webMagicIOSpider = Spider.create(new Job51PositionPageProcessor())
         .setScheduler(new RedisScheduler(RedisConfig.Host))
         .addRequest(getRequest(Position.fistPage)).thread(5)
         .addPipeline(new RedisJob51PositionPipeLine());
 
+    //将爬虫对象交给spring 托管
+    context.getBeanFactory().registerSingleton("webMagicIOSpider", webMagicIOSpider);
     try {
       // 添加扒取数量监控
       SpiderMonitor.instance().register(webMagicIOSpider);

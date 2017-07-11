@@ -14,7 +14,9 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.javastar920905.spider.util.Job51PositionUtil;
 
+import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import us.codecraft.webmagic.Page;
 import us.codecraft.webmagic.Request;
@@ -40,7 +42,7 @@ public class Job51PositionListPageProcessor extends Job51PositionUtil implements
 
   public static void main(String[] args) {
     // spring 容器加载redis
-    ApplicationContext context =
+    ConfigurableApplicationContext context =
         new AnnotationConfigApplicationContext(SpiderUtil.class, RedisConfig.class);
     SpringContextUtil.printIocContextBeanNames();
 
@@ -56,12 +58,13 @@ public class Job51PositionListPageProcessor extends Job51PositionUtil implements
         .addRequest(getRequest(PositionList.fistPage))
         .addPipeline(new RedisJob51PositionListPipeLine()).thread(5);
 
+    //将爬虫对象交给spring 托管
+    context.getBeanFactory().registerSingleton("webMagicIOSpider", webMagicIOSpider);
     try { // 添加扒取数量监控
       SpiderMonitor.instance().register(webMagicIOSpider);
     } catch (JMException e) {
       e.printStackTrace();
     }
-    SpiderUtil.currentWebMagicIOSpider = webMagicIOSpider;
     webMagicIOSpider.start();
   }
 

@@ -16,6 +16,12 @@ public class SpringContextUtil implements ApplicationContextAware {
   // Spring应用上下文环境
   private static ApplicationContext applicationContext;
 
+  @Override
+  public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    SpringContextUtil.applicationContext = applicationContext;
+  }
+
+  //打印容器中的bean
   public static void printIocContextBeanNames() {
     if (applicationContext == null) {
       System.err.println("spring 容器加载失败");
@@ -24,11 +30,6 @@ public class SpringContextUtil implements ApplicationContextAware {
       System.out.println(beanName);
     }
 
-  }
-
-  @Override
-  public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-    SpringContextUtil.applicationContext = applicationContext;
   }
 
   /**

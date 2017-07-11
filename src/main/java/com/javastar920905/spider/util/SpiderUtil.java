@@ -8,7 +8,8 @@ import us.codecraft.webmagic.Spider;
  * Created by ouzhx on 2017/7/6.
  */
 public class SpiderUtil extends StringUtil {
-  public static Spider currentWebMagicIOSpider;
+  public static Spider currentWebMagicIOSpider =
+      SpringContextUtil.getBean("webMagicIOSpider", Spider.class);
 
   public static String userAgent =
       "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36";
