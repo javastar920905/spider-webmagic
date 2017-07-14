@@ -1,32 +1,31 @@
 package com.javastar920905.spider.pageprocessor.job51;
 
-import javax.management.JMException;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Vector;
+
+import com.javastar920905.spider.listener.UrlResultListener;
 import com.javastar920905.spider.pipeline.job51.RedisJob51PositionPipeLine;
+import com.javastar920905.spider.util.Job51PositionUtil;
+import com.javastar920905.spider.util.SpiderUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import com.alibaba.fastjson.JSONObject;
-import com.javastar920905.spider.config.RedisConfig;
-import com.javastar920905.spider.util.SpiderUtil;
-import com.javastar920905.spider.util.Job51PositionUtil;
 
-import org.springframework.util.StringUtils;
 import us.codecraft.webmagic.Page;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.Spider;
-import us.codecraft.webmagic.monitor.SpiderMonitor;
+import us.codecraft.webmagic.SpiderListener;
 import us.codecraft.webmagic.processor.PageProcessor;
-import us.codecraft.webmagic.scheduler.RedisScheduler;
 import us.codecraft.webmagic.selector.Html;
 import us.codecraft.webmagic.selector.Selectable;
-
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * Created by ouzhx on 2017/7/5.
@@ -34,45 +33,72 @@ import java.util.List;
  * 扒取51job 职位详情页面(//TODO 扒取详情页前,需要先扒取所有列表页,找到所有职位url :Job51PositionListPageProcessor.java)
  *
  */
+@Component
 public class Job51PositionPageProcessor extends Job51PositionUtil implements PageProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(Job51PositionPageProcessor.class);
-  // 部分一：抓取网站的相关配置，包括编码、抓取间隔、重试次数等
   private Site site = Site.me();
-  private static List<String> urls = new LinkedList<>();
+  private static Spider webMagicIOSpider = newPositionSpiderInstance();
+  public static List<String> urls = new Vector<>();
 
-  public static void main(String[] args) {
-    // spring 容器加载redis
-    ConfigurableApplicationContext  context =
-        new AnnotationConfigApplicationContext(SpiderUtil.class, RedisConfig.class);
+  // spider 调用一次start()方法后,再次设置url会报错,所以需要重新获取新的spider实例
+  private static Spider newPositionSpiderInstance() {
+    List<SpiderListener> spiderListenerList = new ArrayList<>();
+    spiderListenerList.add(new UrlResultListener());
+    return Spider.create(new Job51PositionPageProcessor()).thread(5)
+        .addPipeline(new RedisJob51PositionPipeLine()).setExitWhenComplete(true)
+        .setSpiderListeners(spiderListenerList);
+  }
 
-    // 发起页面请求,开启5个线程并启动爬虫
-    Spider webMagicIOSpider = Spider.create(new Job51PositionPageProcessor())
-        .setScheduler(new RedisScheduler(RedisConfig.Host))
-        .addRequest(getRequest(Position.fistPage)).thread(5)
-        .addPipeline(new RedisJob51PositionPipeLine());
+  public static void runPositionSpider() {
+    while (true) {
+      try {
+        LOGGER.info("   urlSize: {}  spider status: {}", urls.size(), webMagicIOSpider.getStatus());
 
-    //将爬虫对象交给spring 托管
-    context.getBeanFactory().registerSingleton("webMagicIOSpider", webMagicIOSpider);
-    try {
-      // 添加扒取数量监控
-      SpiderMonitor.instance().register(webMagicIOSpider);
-    } catch (JMException e) {
-      e.printStackTrace();
+        // 避免多次获取urls
+        if (CollectionUtils.isEmpty(urls)) {
+          urls = Position.getUrls();
+          LOGGER.info("redis 获取数据" + urls.size());
+          if (CollectionUtils.isEmpty(urls)) {
+            // url库中没有数据休息 5min
+            Thread.sleep(1000 * 60 * 1);
+          }
+        }
+
+        if (urls != null && urls.size() > 0) {
+          if (webMagicIOSpider.getStatus() != Spider.Status.Running) {
+            LOGGER.info(" 开始新一轮url扒取  urlSize: {}  spider status: {}", urls.size(),
+                webMagicIOSpider.getStatus());
+            if (webMagicIOSpider.getStatus() == Spider.Status.Stopped) {
+              webMagicIOSpider = newPositionSpiderInstance();
+              LOGGER.info(" 新spider  urlSize: {}  spider status: {}", urls.size(),
+                  webMagicIOSpider.getStatus());
+            }
+            // 发起页面请求,开启5个线程并启动爬虫
+            webMagicIOSpider.startUrls(urls);
+            webMagicIOSpider.start();
+          }
+        }
+
+        Thread.sleep(1000 * 60 * 1);// 启动spider后 主线程没什么事了, 每两分钟循环检查一次数据库中的url
+      } catch (Exception e) {
+        webMagicIOSpider = newPositionSpiderInstance();
+        if (CollectionUtils.isEmpty(urls)) {
+          urls = new LinkedList<>();
+        }
+        LOGGER.info(" 职位详情扒取报错 ", e);
+        LOGGER.info(JSONObject.toJSONString(urls));
+      }
     }
-    SpiderUtil.currentWebMagicIOSpider = webMagicIOSpider;
-    webMagicIOSpider.start();
   }
 
 
 
-  // process是定制爬虫逻辑的核心接口，在这里编写抽取逻辑
   @Override
   public void process(Page page) {
-    // 部分二：定义如何抽取页面信息，并保存下来
     Request request = page.getRequest();
     Html html = page.getHtml();
 
-    // 职位信息获取 (这里有多少个字段就相当于有多少个数组) TODO 这里可以优化一下直接放入json,避免产生临时变量
+    // 职位信息获取 TODO 这里可以优化一下直接放入json,避免产生临时变量
     String positionId = html.xpath("//*[@id=\"hidJobID\"]").$("input", "value").get(); // id
     String positionName = html.xpath("/html/body/div[2]/div[2]/div[2]/div/div[1]/h1//text()").get(); // 职位名
     String positionLink = request.getUrl();
@@ -104,15 +130,13 @@ public class Job51PositionPageProcessor extends Job51PositionUtil implements Pag
         page.putField(RESULT, json);
       }
 
-
-      // 部分四：从页面发现后续的url地址来抓取
-      if (urls.size() < 1) {
-        synchronized (urls) {
-          if (urls.size() < 1) {
-            urls = Position.getUrls();
-            page.addTargetRequests(urls);
-          }
+      // 移除已经扒取的url
+      String url = request.getUrl();
+      if (urls.contains(url)) {
+        synchronized (url) {
+          urls.remove(url);
         }
+        LOGGER.debug(" {}  ........... rest  number  ", urls.size());
       }
 
     } catch (Exception e) {

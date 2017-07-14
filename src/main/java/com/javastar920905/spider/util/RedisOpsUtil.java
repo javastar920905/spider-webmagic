@@ -1,57 +1,36 @@
 package com.javastar920905.spider.util;
 
-import com.alibaba.fastjson.JSONArray;
+import static redis.clients.jedis.Protocol.CHARSET;
+
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
-import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.ListOperations;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.stereotype.Component;
 
 import com.alibaba.fastjson.JSONObject;
 
-import static redis.clients.jedis.Protocol.CHARSET;
-
 /**
- * Created by ouzhx on 2017/7/7. 可以查看参考文档了解redisTemplate操作对象的接口
- * http://docs.spring.io/spring-data/redis/docs/1.8.4.RELEASE/reference/html/#redis:template
+ * Created by ouzhx on 2017/7/7.
  */
+@Component
 public class RedisOpsUtil {
+  public static String REDIS_HOST = "192.168.1.170";
   private static final String KEY_CACHE_PREFIX = "spider:";
   /**
    * 职位列表页要缓存的key
    */
   public static final byte[] KEY_JOB51_POSITION = "spider:job51:position".getBytes();
-  public static final byte[] KEY_JOB51_POSITION_LINK = "spider:job51:position:link".getBytes();
-  public static final byte[] KEY_JOB51_COMPANY_LINK =
-      "spider:job51:position:companylink".getBytes();
+  public static final byte[] KEY_JOB51_POSITION_LINK = "spider:job51:link:position".getBytes();
+  public static final byte[] KEY_JOB51_COMPANY_LINK = "spider:job51:link:company".getBytes();
   /**
    * 职位详情key
    */
-  public static final byte[] KEY_JOB51_POSITION_DETAIL = "spider:job51:position:detail".getBytes();
+  public static final byte[] KEY_JOB51_POSITION_DETAIL = "spider:job51:detail:position".getBytes();
   /**
    * 公司详情key
    */
-  public static final byte[] KEY_JOB51_COMPANY_DETAIL = "spider:job51:company:detail".getBytes();
+  public static final byte[] KEY_JOB51_COMPANY_DETAIL = "spider:job51:detail:company".getBytes();
   private static final String PAGE_NUM = "pageNum";
 
-
-  // <editor-fold desc="使用spring redisTemplate 操作redis 遇到个问题操作时乱码,所以改用RedisConnection">
-  // 遇到个问题操作时乱码,所以改用RedisConnection
-  public static RedisTemplate redisTemplate = SpringContextUtil.getBean(RedisTemplate.class);
-  // 字符串操作
-  public static ValueOperations<String, String> valueOps = redisTemplate.opsForValue();
-  // list操作
-  public static ListOperations<String, String> listOps = redisTemplate.opsForList();
-
-  // hash 操作
-  public static HashOperations<String, String, String> hashOpsString = redisTemplate.opsForHash();
-  public static HashOperations<String, String, JSONArray> hashOpsJsonArray =
-      redisTemplate.opsForHash();
-  public static HashOperations<byte[], byte[], byte[]> hashOpsObject = redisTemplate.opsForHash();
-  public static HashOperations<String, String, JSONObject> hashOpsJsonObject =
-      redisTemplate.opsForHash();
-  // </editor-fold>
 
   // <editor-fold desc="使用jedis 客户端操作redis">
   // 使用jedis 客户端操作

@@ -1,17 +1,24 @@
 package com.javastar920905.spider.util;
 
-import static com.javastar920905.spider.util.RedisOpsUtil.closeRedisConnection;
-import static com.javastar920905.spider.util.RedisOpsUtil.getRedisConnection;
 
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.RedisConnection;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+
 import us.codecraft.webmagic.selector.Html;
+
+import static com.javastar920905.spider.util.RedisOpsUtil.closeRedisConnection;
+import static com.javastar920905.spider.util.RedisOpsUtil.getRedisConnection;
 
 /**
  * Created by ouzhx on 2017/7/6.
@@ -20,6 +27,16 @@ import us.codecraft.webmagic.selector.Html;
  */
 public class Job51PositionUtil extends SpiderUtil {
   private static final Logger LOGGER = LoggerFactory.getLogger(Job51PositionUtil.class);
+
+  public static List<String> getStringList(Collection<byte[]> collection) {
+    List<String> list = new Vector<>();
+    Iterator<byte[]> it = collection.iterator();
+    it.forEachRemaining(item -> {
+      list.add(new String(item));
+    });
+    return list;
+  }
+
 
   protected static class Company {
     public static final String fistPage = "http://jobs.51job.com/all/co2812476.html";
@@ -33,7 +50,12 @@ public class Job51PositionUtil extends SpiderUtil {
         connection = getRedisConnection();
         Map<byte[], byte[]> positionUrlMap =
             connection.hGetAll(RedisOpsUtil.KEY_JOB51_COMPANY_LINK);
-        urls = CollectionUtil.getStringList(positionUrlMap.values());
+        urls = getStringList(positionUrlMap.values());
+
+        // 从redis中清除即将扒取的url
+        for (byte[] bytes : positionUrlMap.keySet()) {
+          connection.hDel(RedisOpsUtil.KEY_JOB51_COMPANY_LINK, bytes);
+        }
       } catch (Exception e) {
         closeRedisConnection(connection);
         LOGGER.error("获取公司url列表失败!", e);
@@ -42,6 +64,7 @@ public class Job51PositionUtil extends SpiderUtil {
       }
       return urls;
     }
+
   }
 
   protected static class Position {
@@ -56,7 +79,13 @@ public class Job51PositionUtil extends SpiderUtil {
         connection = getRedisConnection();
         Map<byte[], byte[]> positionUrlMap =
             connection.hGetAll(RedisOpsUtil.KEY_JOB51_POSITION_LINK);
-        urls = CollectionUtil.getStringList(positionUrlMap.values());
+        urls = getStringList(positionUrlMap.values());
+
+        // 从redis中清除即将扒取的url
+        for (byte[] bytes : positionUrlMap.keySet()) {
+          connection.hDel(RedisOpsUtil.KEY_JOB51_POSITION_LINK, bytes);
+        }
+
       } catch (Exception e) {
         closeRedisConnection(connection);
         LOGGER.error("获取职位url列表失败!", e);
@@ -70,7 +99,6 @@ public class Job51PositionUtil extends SpiderUtil {
 
   // 职位列表工具类
   protected static class PositionList {
-    // <editor-fold desc="定义需要扒取的 url">
     public static String firstArea = "010000";// 北京地区
     public static String firstIndustry = "01";// 计算机软件行业
     // 从北京地区+计算机软件行业 开始扒取
@@ -81,28 +109,10 @@ public class Job51PositionUtil extends SpiderUtil {
         "?lang=c&stype=1&postchannel=0000&workyear=99&cotype=99&degreefrom=99&jobterm=99&companysize=99&lonlat=0%2C0&radius=-1&ord_field=1&confirmdate=9&fromType=1&dibiaoid=0&address=&line=&specialarea=00&from=&welfare=";
     public static String pageUrl_suffix = ".html" + queryString;
     public static final String fistPage = pageUrl + 1 + pageUrl_suffix;
-    // </editor-fold>
 
     // <editor-fold desc="获取所有目标页面的url">
     /**
-     * 获取所有目标页面的url(难点在于此处)
-     *
-     * 分析分页 url<a href="http://search.51job.com/list/000000,000000,0000,00,9,99,%2B,2,2.html">
-     *
-     * 发现只有末尾的2,*.html 会产生变化,所以我们可以for循环生成 PageSize(获取分页数 )*每页显示条目的url
-     *
-     * 
-     * 
-     * 获取所有职位: 根据 地区+行业 (深圳+计算机软件行业的所有公司的职位) 结果只有1314页, 所以生成url方案为:
-     * 
-     * 第1批分页列表 =地区[di]+行业[hi~hn] +分页数 ...
-     * 
-     * 第dn批分页列表=地区[dn]+行业[hi~hn] +分页数
-     * 
-     * dn=地区number的数组的长度 hn=行业数组的长度
-     * 
-     * @param html
-     * @return
+     * 获取所有目标页面的url (地区+行业)排列組合 *pageSize
      */
     public static List<String> getUrls(Html html, String currentCityNum) {
       int pageSize = getPageSize(html);
@@ -149,8 +159,99 @@ public class Job51PositionUtil extends SpiderUtil {
       }
       return 1;
     }
+
+    /**
+     * 获取职位增量url
+     */
+    public static class Increment {
+      public static String firstArea = "030000";
+      public static String firstIndustry = "01";// 计算机软件行业
+      public static String timeNumber = "0";// 24小时内
+      // 从北京地区+计算机软件行业 开始扒取 指定时间内新增url 根据发布时间排序
+      public static String pageUrl = "http://search.51job.com/list/" + firstArea + ",000000,0000,"
+          + firstIndustry + "," + timeNumber + ",99,%2B,1,";
+      public static String queryString =
+          "?lang=c&stype=1&postchannel=0000&workyear=99&cotype=99&degreefrom=99&jobterm=99&companysize=99&lonlat=0%2C0&radius=-1&ord_field=1&confirmdate=9&fromType=1&dibiaoid=0&address=&line=&specialarea=00&from=&welfare=";
+      public static String pageUrl_suffix = ".html" + queryString;
+      public static final String fistPage = pageUrl + 1 + pageUrl_suffix;
+
+      /**
+       * 获取指定时间段内 的增量url (省份+行业)排列組合 *pageSize
+       */
+      public static List<String> getIncreUrls(Html html, String provinceNumber) {
+        int pageSize = getPageSize(html);
+        int pageNum = 2;
+        // 第一页已经在request中请求了,<=pageSize页需要请求
+        List<String> urls = new LinkedList();
+
+        // 生成请求列表[(省份i~行业n),(地区i+1,行业1)]
+        int areaIndex = 0;
+        boolean canExit = false;
+        for (; areaIndex < provinceValueData.length; areaIndex++) {
+          if (provinceValueData[areaIndex].equals(provinceNumber)) {
+            for (String industryNum : industryData) {
+              for (; pageNum <= pageSize; pageNum++) {
+                urls.add("http://search.51job.com/list/" + provinceNumber + ",000000,0000,"
+                    + industryNum + "," + timeNumber + ",99,%2B,1," + pageNum + pageUrl_suffix);
+              }
+            }
+            canExit = true;// 可以终止最外层循环了
+          } else {
+            if (canExit) {
+              break;
+            }
+          }
+        }
+        if (areaIndex < provinceValueData.length) {
+          String changeCityUrl =
+              "http://search.51job.com/list/" + provinceValueData[areaIndex] + ",000000,0000,"
+                  + industryData[0] + "," + timeNumber + ",99,%2B,1," + 1 + pageUrl_suffix;
+          // 退出循环时areaIndex已经+1了
+          urls.add(changeCityUrl);
+          LOGGER.info(" 当前下标为{},对应城市为:{},列表最后一条url:为{} ", areaIndex, provinceValueData[areaIndex],
+              changeCityUrl);
+        }
+        return urls;
+      }
+    }
     // </editor-fold>
 
+
+    public static JSONArray dealPositionList(Html html) {
+      // 职位列表css定位
+      String parentCss = "#resultList .el ";
+      // 职位信息获取 (这里有多少个字段就相当于有多少个数组)
+      List<String> positionIdList = html.$(parentCss + ".t1 input", "value").all(); // id
+      List<String> positionNameList = html.css(parentCss + ".t1 span a").xpath("a/text()").all(); // 职位名
+      List<String> positionLinkList = html.css(parentCss + ".t1 span a").links().all();
+      List<String> companyNameList = html.css(parentCss + ".t2 a").xpath("a/text()").all(); // 公司名
+      List<String> companyLinkList = html.css(parentCss + ".t2 a").links().all();
+      List<String> workPlaceList =
+          html.css(parentCss + ".t3:not(.title .t3)").xpath("span/text()").all();
+      List<String> salaryList =
+          html.css(parentCss + ".t4:not(.title .t4)").xpath("span/text()").all();
+      List<String> publishDateList =
+          html.css(parentCss + " .t5:not(.title .t5)").xpath("span/text()").all();
+
+      JSONArray positionJsonArray = new JSONArray();
+      int i = 0;
+      if (positionIdList != null) {
+        int listSize = positionIdList.size();
+        for (; i < listSize; i++) {
+          JSONObject json = new JSONObject();
+          json.put("positionId", positionIdList.get(i));
+          json.put("positionName", positionNameList.get(i));
+          json.put("positionLink", positionLinkList.get(i));
+          json.put("companyName", companyNameList.get(i));
+          json.put("companyLink", companyLinkList.get(i));
+          json.put("workPlace", workPlaceList.get(i));
+          json.put("salary", salaryList.get(i));
+          json.put("publishDate", publishDateList.get(i));
+          positionJsonArray.add(json);
+        }
+      }
+      return positionJsonArray;
+    }
 
     // <editor-fold desc="定义地区 行业 工作职能等数据字典">
     /* 51job 所有行业编号 */
@@ -159,6 +260,13 @@ public class Job51PositionUtil extends SpiderUtil {
         "08", "46", "47", "12", "48", "49", "13", "15", "26", "09", "50", "51", "34", "63", "07",
         "59", "52", "18", "23", "24", "11", "53", "17", "54", "27", "21", "55", "19", "16", "36",
         "61", "56", "28", "57", "20", "29", "58",};
+
+    /* 51job 所有省份和直辖市 */
+    private static final String[] provinceValueData = {"030000", "070000", "080000", "090000",
+        "100000", "110000", "120000", "130000", "150000", "160000", "170000", "180000", "190000",
+        "200000", "210000", "220000", "230000", "240000", "250000", "260000", "270000", "320000",
+        "010000", "050000", "020000", "060000", "280000", "310000", "300000", "140000", "290000",
+        "330000", "340000", "350000", "01"};
 
     /* 51job所有地区编号 */
     private static final String[] areaValueData = {"010000", "010100", "010200", "010300", "010400",
@@ -252,12 +360,7 @@ public class Job51PositionUtil extends SpiderUtil {
         "310600", "310700", "310800", "310900", "311000", "311100", "311200", "311300", "311400",
         "311500", "311600", "311700", "311800", "311900", "320200", "320300", "320400", "320500",
         "320600", "320700", "320800", "320900", "330000", "340000", "350000", "01"};
-    /* 51job 所有省份和直辖市 */
-    private static final String[] provinceValueData = {"030000", "070000", "080000", "090000",
-        "100000", "110000", "120000", "130000", "150000", "160000", "170000", "180000", "190000",
-        "200000", "210000", "220000", "230000", "240000", "250000", "260000", "270000", "320000",
-        "010000", "050000", "020000", "060000", "280000", "310000", "300000", "140000", "290000",
-        "330000", "340000", "350000", "01"};
+
 
 
     /* 51job 所有工作职能编号 */
