@@ -1,11 +1,9 @@
 package com.javastar920905.spider.util;
 
-
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Vector;
 
 import org.slf4j.Logger;
@@ -15,6 +13,7 @@ import org.springframework.data.redis.connection.RedisConnection;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
+import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.selector.Html;
 
 import static com.javastar920905.spider.util.RedisOpsUtil.closeRedisConnection;
@@ -27,6 +26,10 @@ import static com.javastar920905.spider.util.RedisOpsUtil.getRedisConnection;
  */
 public class Job51PositionUtil extends SpiderUtil {
   private static final Logger LOGGER = LoggerFactory.getLogger(Job51PositionUtil.class);
+  // 启动spider后 主线程没什么事了, 每1分钟循环检查一次数据库中的url
+  protected static final long positionSpiderSleepInterval = 1000 * 5;
+  // 启动spider后 主线程没什么事了, 每隔一段时间循环检查一次数据库中的职位信息
+  protected static final long companySpiderSleepInterval = 1000 * 8;
 
   public static List<String> getStringList(Collection<byte[]> collection) {
     List<String> list = new Vector<>();
@@ -38,31 +41,48 @@ public class Job51PositionUtil extends SpiderUtil {
   }
 
 
+
   protected static class Company {
     public static final String fistPage = "http://jobs.51job.com/all/co2812476.html";
 
     // 从redis中获取已有url列表
-    public static List<String> getUrls() {
-      List<String> urls = null;
-      // 将请求发送到消息队列,空闲时处理
+    public static List<Request> getRequestList() {
+      List<Request> resultList = null;
       RedisConnection connection = null;
       try {
         connection = getRedisConnection();
-        Map<byte[], byte[]> positionUrlMap =
-            connection.hGetAll(RedisOpsUtil.KEY_JOB51_COMPANY_LINK);
-        urls = getStringList(positionUrlMap.values());
-
-        // 从redis中清除即将扒取的url
-        for (byte[] bytes : positionUrlMap.keySet()) {
-          connection.hDel(RedisOpsUtil.KEY_JOB51_COMPANY_LINK, bytes);
-        }
+        // 从后面开始获取,获取最后20个元素
+        List<byte[]> positionJsonList =
+            connection.lRange(RedisOpsUtil.KEY_JOB51_POSITION_DETAIL, 0, 49);
+        resultList = convertJson2RequestList(positionJsonList);
       } catch (Exception e) {
         closeRedisConnection(connection);
         LOGGER.error("获取公司url列表失败!", e);
       } finally {
         closeRedisConnection(connection);
       }
-      return urls;
+      return resultList;
+    }
+
+    public static List<Request> convertJson2RequestList(Collection<byte[]> collection) {
+      List<Request> requestList = new Vector<>();
+      Iterator<byte[]> it = collection.iterator();
+      it.forEachRemaining(item -> {
+        JSONObject json = JSONObject.parseObject(item, JSONObject.class);
+        Request request = new Request(json.getString("companyLink"));
+        request.putExtra("positionJson", json);
+        requestList.add(request);
+      });
+      return requestList;
+    }
+
+    // 从redis从删除指定元素
+    public static long removePositionListItem(JSONObject positionJson) {
+      RedisConnection connection = getRedisConnection();
+      long result = connection.lRem(RedisOpsUtil.KEY_JOB51_POSITION_DETAIL, 1,
+          positionJson.toString().getBytes());
+      closeRedisConnection(connection);
+      return result;
     }
 
   }
@@ -73,19 +93,13 @@ public class Job51PositionUtil extends SpiderUtil {
     // 从redis中获取已有url列表
     public static List<String> getUrls() {
       List<String> urls = null;
-      // 将请求发送到消息队列,空闲时处理
       RedisConnection connection = null;
       try {
         connection = getRedisConnection();
-        Map<byte[], byte[]> positionUrlMap =
-            connection.hGetAll(RedisOpsUtil.KEY_JOB51_POSITION_LINK);
-        urls = getStringList(positionUrlMap.values());
-
-        // 从redis中清除即将扒取的url
-        for (byte[] bytes : positionUrlMap.keySet()) {
-          connection.hDel(RedisOpsUtil.KEY_JOB51_POSITION_LINK, bytes);
-        }
-
+        //获取前50条url
+        List<byte[]> positionUrlList =
+            connection.lRange(RedisOpsUtil.KEY_JOB51_POSITION_LINK, 0, 49);
+        urls = getStringList(positionUrlList);
       } catch (Exception e) {
         closeRedisConnection(connection);
         LOGGER.error("获取职位url列表失败!", e);
@@ -93,6 +107,14 @@ public class Job51PositionUtil extends SpiderUtil {
         closeRedisConnection(connection);
       }
       return urls;
+    }
+
+    // 从redis从删除指定元素
+    public static long removeSpideredUrl(String url) {
+      RedisConnection connection = getRedisConnection();
+      long result = connection.lRem(RedisOpsUtil.KEY_JOB51_POSITION_LINK, 1, url.getBytes());
+      closeRedisConnection(connection);
+      return result;
     }
   }
 

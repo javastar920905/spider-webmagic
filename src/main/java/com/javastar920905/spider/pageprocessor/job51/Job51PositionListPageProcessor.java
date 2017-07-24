@@ -1,23 +1,22 @@
 package com.javastar920905.spider.pageprocessor.job51;
 
-import static com.rencaijia.common.util.StringUtil.RESULT;
+
+import static com.javastar920905.spider.util.StringUtil.RESULT;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TimeZone;
 
 import javax.management.JMException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.SpringApplication;
-import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import com.rencaijia.common.constants.CommonConstants;
-import com.rencaijia.spider.config.AppConfig;
-import com.rencaijia.spider.pipeline.job51.RedisJob51PositionListPipeLine;
-import com.rencaijia.spider.util.Job51PositionUtil;
-import com.rencaijia.spider.util.SpiderUtil;
+import com.javastar920905.spider.config.RedisConfig;
+import com.javastar920905.spider.pipeline.job51.RedisJob51PositionListPipeLine;
+import com.javastar920905.spider.util.Job51PositionUtil;
+import com.javastar920905.spider.util.SpiderUtil;
 
 import us.codecraft.webmagic.Page;
 import us.codecraft.webmagic.Request;
@@ -39,9 +38,9 @@ public class Job51PositionListPageProcessor extends Job51PositionUtil implements
   private static List<String> historyAreaNumber = new ArrayList<>();
 
   public static void main(String[] args) {
-    TimeZone.setDefault(TimeZone.getTimeZone(CommonConstants.DEFAULT_TIMEZONE));
     // spring 容器加载redis
-    ApplicationContext context = SpringApplication.run(AppConfig.class);
+    ConfigurableApplicationContext context =
+        new AnnotationConfigApplicationContext(SpiderUtil.class, RedisConfig.class);
 
 
     // 启动spider 爬虫,没有托管给spring
@@ -57,7 +56,8 @@ public class Job51PositionListPageProcessor extends Job51PositionUtil implements
     } catch (JMException e) {
       e.printStackTrace();
     }
-    SpiderUtil.currentWebMagicIOSpider = webMagicIOSpider;
+    /*context.getBeanFactory().registerSingleton("webMagicIOSpider",webMagicIOSpider);
+    Spider webMagicIOSpider2 = context.getBean("webMagicIOSpider",Spider.class);*/
     webMagicIOSpider.start();
   }
 

@@ -2,14 +2,11 @@ package com.javastar920905.spider.util;
 
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
-import us.codecraft.webmagic.Spider;
 
 /**
  * Created by ouzhx on 2017/7/6.
  */
-public class SpiderUtil extends StringUtil {
-  public static Spider currentWebMagicIOSpider =
-      SpringContextUtil.getBean("webMagicIOSpider", Spider.class);
+public class SpiderUtil {
 
   public static String userAgent =
       "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36";
@@ -41,11 +38,6 @@ public class SpiderUtil extends StringUtil {
   public static Request getRequest(String aimUrl) {
     // 使用360浏览器的请求头
     Request request = new Request(aimUrl);
-    request.setMethod("get");
-    request.addHeader("Accept", accept);
-    request.addHeader("Accept-Encoding", accept_encoding);
-    request.addHeader("Accept-Language", accept_language);
-    request.addHeader("User-Agent", userAgent);
     return request;
   }
 }

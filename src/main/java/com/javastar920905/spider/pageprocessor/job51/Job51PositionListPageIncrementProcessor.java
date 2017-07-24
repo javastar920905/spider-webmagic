@@ -1,10 +1,10 @@
 package com.javastar920905.spider.pageprocessor.job51;
 
 
-import java.util.ArrayList;
-import java.util.List;
+import static com.javastar920905.spider.util.StringUtil.RESULT;
 
-import javax.management.JMException;
+import java.util.List;
+import java.util.Vector;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +21,6 @@ import us.codecraft.webmagic.Page;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.Spider;
-import us.codecraft.webmagic.monitor.SpiderMonitor;
 import us.codecraft.webmagic.processor.PageProcessor;
 import us.codecraft.webmagic.selector.Html;
 
@@ -36,37 +35,28 @@ public class Job51PositionListPageIncrementProcessor extends Job51PositionUtil
       LoggerFactory.getLogger(Job51PositionListPageIncrementProcessor.class);
   // 部分一：抓取网站的相关配置
   private Site site = Site.me();
-  private static List<String> historyAreaNumber = new ArrayList<>();
+  private static List<String> historyAreaNumber = new Vector<>();
 
-  /*
-   * @Scheduled(cron = "0 0 9/3 * * ?") // 9点开始每3个小时执行一次 public static void runIncrementSpider() {
-   */
+
+  // @Scheduled(cron = "0 0 9/3 * * ?") // 9点开始每3个小时执行一次
+  // @Scheduled(fixedDelay = 70)
+  // public static void runIncrementSpider() {
   public static void main(String[] args) {
-
     // spring 容器加载redis
     ConfigurableApplicationContext context =
         new AnnotationConfigApplicationContext(SpiderUtil.class, RedisConfig.class);
+    LOGGER.info("runIncrementSpider begin! ...");
 
     // 发起页面请求,开启5个线程并启动爬虫
     Spider webMagicIOSpider = Spider.create(new Job51PositionListPageIncrementProcessor())
         // .setScheduler(new RedisScheduler(REDIS_HOST))
         .addRequest(getRequest(PositionList.Increment.fistPage))
         .addPipeline(new RedisJob51PositionListPipeLine()).thread(5);
+    webMagicIOSpider.runAsync();
 
-    try {
-      // 添加扒取数量监控
-      SpiderMonitor.instance().register(webMagicIOSpider);
-    } catch (JMException e) {
-      e.printStackTrace();
-    }
-    // 将爬虫对象交给spring 托管
-    context.getBeanFactory().registerSingleton("webMagicIOSpider", webMagicIOSpider);
-    SpiderUtil.currentWebMagicIOSpider = webMagicIOSpider;
-    webMagicIOSpider.start();
-
-    // 同时执行详情页的爬取
-    new Thread(() -> Job51CompanyPageProcessor.runCompanySpider()).start();
+    // 开始执行详情页的爬取
     new Thread(() -> Job51PositionPageProcessor.runPositionSpider()).start();
+    new Thread(() -> Job51CompanyPageProcessor.runCompanySpider()).start();
   }
 
   // 从url中截取地区编号
@@ -94,6 +84,7 @@ public class Job51PositionListPageIncrementProcessor extends Job51PositionUtil
 
     try {
       // 部分四：发现指定时间内增量url
+
       String currentNum = getCurrentAreaNumber(request.getUrl());
       if (currentNum != null && !historyAreaNumber.contains(currentNum)) {
         synchronized (historyAreaNumber) {
@@ -104,6 +95,7 @@ public class Job51PositionListPageIncrementProcessor extends Job51PositionUtil
           }
         }
       }
+
 
     } catch (Exception e) {
       LOGGER.error("获取页面失败 {}", request.getUrl(), e);

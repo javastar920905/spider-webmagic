@@ -1,31 +1,26 @@
 package com.javastar920905.spider.pageprocessor.job51;
 
-import static com.rencaijia.common.util.StringUtil.RESULT;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Vector;
 
+import com.javastar920905.spider.pipeline.job51.RedisJob51CompanyPipeLine;
+import com.javastar920905.spider.util.Job51PositionUtil;
+import com.javastar920905.spider.util.SpiderUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import com.alibaba.fastjson.JSONObject;
-import com.rencaijia.spider.listener.UrlResultListener;
-import com.rencaijia.spider.pipeline.job51.RedisJob51CompanyPipeLine;
-import com.rencaijia.spider.util.Job51PositionUtil;
-import com.rencaijia.spider.util.SpiderUtil;
 
 import us.codecraft.webmagic.Page;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.Spider;
-import us.codecraft.webmagic.SpiderListener;
 import us.codecraft.webmagic.processor.PageProcessor;
 import us.codecraft.webmagic.selector.Html;
+
+import static com.javastar920905.spider.util.StringUtil.RESULT;
 
 /**
  * Created by ouzhx on 2017/7/5.
@@ -38,57 +33,46 @@ public class Job51CompanyPageProcessor extends Job51PositionUtil implements Page
   private static final Logger LOGGER = LoggerFactory.getLogger(Job51CompanyPageProcessor.class);
   // 部分一：抓取网站的相关配置，包括编码、抓取间隔、重试次数等
   private Site site = Site.me();
-  public static List<String> urls = new Vector<>();
   private static Spider webMagicIOSpider = newInstance();
 
 
   private static Spider newInstance() {
-    List<SpiderListener> spiderListenerList = new ArrayList<>();
-    spiderListenerList.add(new UrlResultListener());
-    return Spider.create(new Job51CompanyPageProcessor()).thread(5)
-        .addPipeline(new RedisJob51CompanyPipeLine()).setExitWhenComplete(true)
-        .setSpiderListeners(spiderListenerList);
+    return Spider.create(new Job51CompanyPageProcessor()).thread(10)
+        .addPipeline(new RedisJob51CompanyPipeLine()).setExitWhenComplete(true);
   }
 
-  public static void runCompanySpider() {
 
+  public static void runCompanySpider() {
+    try {
+      Thread.sleep(1000 * 20);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
     while (true) {
       try {
-        LOGGER.info("   urlSize: {}  spider status: {}", urls.size(), webMagicIOSpider.getStatus());
-
         // 避免多次获取urls
-        if (CollectionUtils.isEmpty(urls)) {
-          urls = Company.getUrls();
-          LOGGER.info("redis 获取数据" + urls.size());
-          if (CollectionUtils.isEmpty(urls)) {
-            // url库中没有数据休息 5min
-            Thread.sleep(1000 * 60 * 1);
-          }
-        }
+        List requests = Company.getRequestList();
+        LOGGER.info("redis 获取数据" + requests.size());
 
-        if (urls != null && urls.size() > 0) {
+        if (requests != null && requests.size() > 0) {
           if (webMagicIOSpider.getStatus() != Spider.Status.Running) {
-            LOGGER.info(" 开始新一轮url扒取  urlSize: {}  spider status: {}", urls.size(),
+            LOGGER.info(" 开始新一轮url扒取  urlSize: {}  spider status: {}", requests.size(),
                 webMagicIOSpider.getStatus());
             if (webMagicIOSpider.getStatus() == Spider.Status.Stopped) {
               webMagicIOSpider = newInstance();
-              LOGGER.info(" 新spider  urlSize: {}  spider status: {}", urls.size(),
+              LOGGER.info(" 新spider  urlSize: {}  spider status: {}", requests.size(),
                   webMagicIOSpider.getStatus());
             }
             // 发起页面请求,开启5个线程并启动爬虫
-            webMagicIOSpider.startUrls(urls);
+            webMagicIOSpider.startRequest(requests);
             webMagicIOSpider.start();
           }
         }
 
-        Thread.sleep(1000 * 60 * 1);// 启动spider后 主线程没什么事了, 每两分钟循环检查一次数据库中的url
+        Thread.sleep(companySpiderSleepInterval);
       } catch (Exception e) {
         webMagicIOSpider = newInstance();
-        if (CollectionUtils.isEmpty(urls)) {
-          urls = new LinkedList<>();
-        }
         LOGGER.info(" 公司详情扒取报错 ", e);
-        LOGGER.info(JSONObject.toJSONString(urls));
       }
     }
 
@@ -104,6 +88,7 @@ public class Job51CompanyPageProcessor extends Job51PositionUtil implements Page
     // 公司信息获取
     String companyId = html.xpath("//*[@id=\"hidCOID\"]").$("input", "value").get(); // id
     try {
+      JSONObject positionJson = (JSONObject) request.getExtra("positionJson");
       if (companyId != null && !StringUtils.isEmpty(companyId)) {
         JSONObject json = new JSONObject();
         json.put("companyId", companyId);
@@ -115,21 +100,17 @@ public class Job51CompanyPageProcessor extends Job51PositionUtil implements Page
         json.put("industry", html.xpath("/html/body/div[2]/div[2]/div[2]/div/p[1]/text()").get()); // 类型
         json.put("companyDesc",
             html.xpath("/html/body/div[2]/div[2]/div[3]/div[1]/div/div/div[1]/p/text()").get());
+        json.put("positionJson", positionJson);
         page.putField(RESULT, json);
       }
 
 
-      // 移除已经扒取的url
-      String url = request.getUrl();
-      if (urls.contains(url)) {
-        synchronized (url) {
-          urls.remove(url);
-        }
-        LOGGER.debug(" {}  ........... rest  number  ", urls.size());
-      }
+      // 从redis 移除已经扒取的requst
+      Company.removePositionListItem(positionJson);
 
+    } catch (
 
-    } catch (Exception e) {
+    Exception e) {
       LOGGER.error("获取页面失败 {}", request.getUrl(), e);
     }
   }
