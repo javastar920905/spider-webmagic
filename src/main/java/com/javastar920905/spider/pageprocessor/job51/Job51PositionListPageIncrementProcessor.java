@@ -38,6 +38,12 @@ public class Job51PositionListPageIncrementProcessor extends Job51PositionUtil
   private static List<String> historyAreaNumber = new Vector<>();
 
 
+  private static Spider newInstance() {
+    return Spider.create(new Job51PositionListPageIncrementProcessor())
+        .addRequest(getRequest(PositionList.Increment.fistPage))
+        .addPipeline(new RedisJob51PositionListPipeLine()).thread(5);
+  }
+
   // @Scheduled(cron = "0 0 9/3 * * ?") // 9点开始每3个小时执行一次
   // @Scheduled(fixedDelay = 70)
   // public static void runIncrementSpider() {
@@ -48,10 +54,7 @@ public class Job51PositionListPageIncrementProcessor extends Job51PositionUtil
     LOGGER.info("runIncrementSpider begin! ...");
 
     // 发起页面请求,开启5个线程并启动爬虫
-    Spider webMagicIOSpider = Spider.create(new Job51PositionListPageIncrementProcessor())
-        // .setScheduler(new RedisScheduler(REDIS_HOST))
-        .addRequest(getRequest(PositionList.Increment.fistPage))
-        .addPipeline(new RedisJob51PositionListPipeLine()).thread(5);
+    Spider webMagicIOSpider = newInstance();
     webMagicIOSpider.runAsync();
 
     // 开始执行详情页的爬取
