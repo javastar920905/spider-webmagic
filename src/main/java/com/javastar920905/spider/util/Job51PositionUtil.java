@@ -1,11 +1,13 @@
 package com.javastar920905.spider.util;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Vector;
 
+import com.javastar920905.spider.listener.FailedPageListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.RedisConnection;
@@ -14,6 +16,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
 import us.codecraft.webmagic.Request;
+import us.codecraft.webmagic.SpiderListener;
 import us.codecraft.webmagic.selector.Html;
 
 import static com.javastar920905.spider.util.RedisOpsUtil.closeRedisConnection;
@@ -27,9 +30,18 @@ import static com.javastar920905.spider.util.RedisOpsUtil.getRedisConnection;
 public class Job51PositionUtil extends SpiderUtil {
   private static final Logger LOGGER = LoggerFactory.getLogger(Job51PositionUtil.class);
   // 启动spider后 主线程没什么事了, 每1分钟循环检查一次数据库中的url
-  protected static final long positionSpiderSleepInterval = 1000 * 5;
   // 启动spider后 主线程没什么事了, 每隔一段时间循环检查一次数据库中的职位信息
   protected static final long companySpiderSleepInterval = 1000 * 8;
+  // 启动spider后 主线程没什么事了, 每隔一段时间循环检查一次数据库中的url
+  protected static final long positionSpiderSleepInterval = 1000 * 60;
+  //职位扒取开启线程数
+  protected static final int threadNumber = 20;
+  //爬虫 开启n个线程,在n段时间内要爬取的职位数
+  protected static final int getPositionLinkNumber = 1499;
+  protected static final List<SpiderListener> LISTENERS = new ArrayList<>();
+  static {
+    LISTENERS.add(new FailedPageListener());
+  }
 
   public static List<String> getStringList(Collection<byte[]> collection) {
     List<String> list = new Vector<>();

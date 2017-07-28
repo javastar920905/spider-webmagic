@@ -25,9 +25,11 @@ import static com.javastar920905.spider.util.StringUtil.RESULT;
 /**
  * Created by ouzhx on 2017/7/5.
  *
- * 扒取51job 公司详情页面(//TODO 扒取详情页前,需要先扒取所有列表页,找到所有职位url :Job51PositionListPageProcessor.java)
+ * 扒取51job 公司详情页面(
  *
+ *当前类已经被废弃,使用了其他实现方式
  */
+@Deprecated
 @Component
 public class Job51CompanyPageProcessor extends Job51PositionUtil implements PageProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(Job51CompanyPageProcessor.class);

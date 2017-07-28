@@ -2,6 +2,13 @@ package com.javastar920905.spider.util;
 
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
+import us.codecraft.webmagic.selector.Html;
+import us.codecraft.webmagic.utils.UrlUtils;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 /**
  * Created by ouzhx on 2017/7/6.
@@ -39,5 +46,27 @@ public class SpiderUtil {
     // 使用360浏览器的请求头
     Request request = new Request(aimUrl);
     return request;
+  }
+
+  /**
+   * 使用java.net.URL api抓取网页 并封装成 webmagic html对象
+   *
+   * @param aimUrl 要抓取页面的url
+   * @return
+   * @throws Exception
+   */
+  public static Html captureHtml(String aimUrl) throws Exception {
+    URL url = new URL(aimUrl);
+    HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
+    InputStreamReader input = new InputStreamReader(httpConn.getInputStream(), "gb2312");
+    BufferedReader bufReader = new BufferedReader(input);
+    String line = "";
+    StringBuilder contentBuf = new StringBuilder();
+    while ((line = bufReader.readLine()) != null) {
+      contentBuf.append(line);
+    }
+    String webPageString = contentBuf.toString();
+    Html html = new Html(webPageString, aimUrl);
+    return html;
   }
 }

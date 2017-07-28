@@ -59,7 +59,7 @@ public class Job51PositionListPageIncrementProcessor extends Job51PositionUtil
 
     // 开始执行详情页的爬取
     new Thread(() -> Job51PositionPageProcessor.runPositionSpider()).start();
-    new Thread(() -> Job51CompanyPageProcessor.runCompanySpider()).start();
+   // new Thread(() -> Job51CompanyPageProcessor.runCompanySpider()).start();
   }
 
   // 从url中截取地区编号
