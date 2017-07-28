@@ -16,6 +16,7 @@ import static com.javastar920905.spider.util.StringUtil.RESULT;
 /**
  * Created by ouzhx on 2017/7/5.
  */
+@Deprecated
 public class RedisJob51CompanyPipeLine extends RedisOpsUtil implements Pipeline {
   private static final Logger LOGGER = LoggerFactory.getLogger(RedisJob51CompanyPipeLine.class);
 

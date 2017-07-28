@@ -53,7 +53,7 @@ public class Job51PositionUtil extends SpiderUtil {
   }
 
 
-
+  @Deprecated
   protected static class Company {
     public static final String fistPage = "http://jobs.51job.com/all/co2812476.html";
 
