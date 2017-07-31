@@ -19,6 +19,7 @@ import static com.javastar920905.spider.util.StringUtil.RESULT;
 /**
  * Created by ouzhx on 2017/7/5. 职位详情扒取结果处理
  */
+@Deprecated
 public class RedisJob51PositionPipeLine extends RedisOpsUtil implements Pipeline {
   private static final Logger LOGGER = LoggerFactory.getLogger(RedisJob51PositionPipeLine.class);
 

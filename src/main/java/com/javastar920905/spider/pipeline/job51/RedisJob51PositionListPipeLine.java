@@ -42,7 +42,9 @@ public class RedisJob51PositionListPipeLine extends RedisOpsUtil implements Pipe
             JSONObject companyJson = positionExtraJson.getJSONObject(COMPANY_JSON);
             if (positionJson != null) {
               connection.rPush(KEY_JOB51_POSITION_DETAIL, positionJson.toJSONString().getBytes());
-              connection.rPush(KEY_JOB51_COMPANY_DETAIL, companyJson.toJSONString().getBytes());
+              if (companyJson!=null){
+                connection.rPush(KEY_JOB51_COMPANY_DETAIL, companyJson.toJSONString().getBytes());
+              }
             }
           } else {
             // 美团职位等子域名 需要单独扒取 http://meituan.51job.com/sc/job_shuoming.php?jobid=87517160

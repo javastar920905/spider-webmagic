@@ -14,7 +14,6 @@ import org.springframework.util.StringUtils;
 
 import com.alibaba.fastjson.JSONObject;
 
-
 import us.codecraft.webmagic.Page;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
@@ -54,6 +53,7 @@ import static com.javastar920905.spider.util.StringUtil.RESULT;
  *
  */
 @Component
+@Deprecated
 public class Job51PositionPageProcessor extends Job51PositionUtil implements PageProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(Job51PositionPageProcessor.class);
   private Site site = Site.me();
@@ -61,10 +61,11 @@ public class Job51PositionPageProcessor extends Job51PositionUtil implements Pag
 
 
 
- /* public static void main(String[] args) {
-    webMagicIOSpider.addUrl("http://jobs.51job.com/kunming-whq/92169260.html?s=01&t=0");
-    webMagicIOSpider.start();
-  }*/
+  /*
+   * public static void main(String[] args) {
+   * webMagicIOSpider.addUrl("http://jobs.51job.com/kunming-whq/92169260.html?s=01&t=0");
+   * webMagicIOSpider.start(); }
+   */
 
 
 
