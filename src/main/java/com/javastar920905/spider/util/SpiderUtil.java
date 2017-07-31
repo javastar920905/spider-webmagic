@@ -38,15 +38,8 @@ public class SpiderUtil {
     return site;
   }
 
-  /**
-   * 必须设置User-Agent请求头信息[默认请求手机版的页面,数据格式不一致]
-   *
-   * @return
-   */
   public static Request getRequest(String aimUrl) {
-    // 使用360浏览器的请求头
-    Request request = new Request(aimUrl);
-    return request;
+    return new Request(aimUrl);
   }
 
   /**
@@ -56,7 +49,10 @@ public class SpiderUtil {
    * @return
    * @throws Exception
    */
-  public static Html captureHtml(String aimUrl)  {
+  public static Html captureHtml(String aimUrl) {
+    if (aimUrl == null) {
+      return null;
+    }
     Html html = null;
     try {
       URL url = new URL(aimUrl);

@@ -104,6 +104,7 @@ public class Job51PositionUtil extends SpiderUtil {
 
   }
 
+  @Deprecated
   protected static class Position {
     public static final String fistPage = "http://jobs.51job.com/dalian/80993878.html?s=01&t=0";
 
