@@ -15,7 +15,6 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 
 import com.javastar920905.spider.config.RedisConfig;
 import com.javastar920905.spider.pipeline.job51.RedisJob51PositionListPipeLine;
-import com.javastar920905.spider.util.Job51PositionUtil;
 import com.javastar920905.spider.util.SpiderUtil;
 
 import us.codecraft.webmagic.Page;
@@ -30,7 +29,7 @@ import us.codecraft.webmagic.selector.Html;
  * Created by ouzhx on 2017/7/5. 扒取51job 职位列表(注解方式不好用,还是这个模式实在)
  *
  */
-public class Job51PositionListPageProcessor extends Job51PositionUtil implements PageProcessor {
+public class Job51PositionListPageProcessor extends BaseJob51PositionProcessor implements PageProcessor {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(Job51PositionListPageProcessor.class);
   // 部分一：抓取网站的相关配置，包括编码、抓取间隔、重试次数等

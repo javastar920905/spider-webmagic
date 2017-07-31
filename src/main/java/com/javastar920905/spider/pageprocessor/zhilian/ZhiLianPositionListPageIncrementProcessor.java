@@ -1,7 +1,4 @@
-package com.javastar920905.spider.pageprocessor.job51;
-
-
-import static com.javastar920905.spider.util.StringUtil.RESULT;
+package com.javastar920905.spider.pageprocessor.zhilian;
 
 import java.util.List;
 import java.util.Vector;
@@ -10,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.stereotype.Component;
 
 import com.javastar920905.spider.config.RedisConfig;
 import com.javastar920905.spider.pipeline.job51.RedisJob51PositionListPipeLine;
@@ -24,28 +20,40 @@ import us.codecraft.webmagic.processor.PageProcessor;
 import us.codecraft.webmagic.selector.Html;
 
 /**
- * Created by ouzhx on 2017/7/5. 增量爬取51job 职位列表(发现指定时间段内新增职位url)
+ * 智联招聘职位增量爬取
  *
+ * Created by ouzhx on 2017/7/31.
  */
-@Component
-public class Job51PositionListPageIncrementProcessor extends BaseJob51PositionProcessor
+public class ZhiLianPositionListPageIncrementProcessor extends BaseZhiLianPositionProcessor
     implements PageProcessor {
   private static final Logger LOGGER =
-      LoggerFactory.getLogger(Job51PositionListPageIncrementProcessor.class);
+      LoggerFactory.getLogger(ZhiLianPositionListPageIncrementProcessor.class);
   // 部分一：抓取网站的相关配置
   private Site site = Site.me();
+  // 记录已经扒取过的地区
   private static List<String> historyAreaNumber = new Vector<>();
 
+  public Site getSite() {
+    return SpiderUtil.setSite(site);
+  }
 
   private static Spider newInstance() {
-    return Spider.create(new Job51PositionListPageIncrementProcessor())
-        .addRequest(getRequest(PositionList.Increment.fistPage))
+    return Spider.create(new ZhiLianPositionListPageIncrementProcessor())
+        .addRequest(getRequest(BaseZhiLianPositionProcessor.PositionList.Increment.fistPage))
         .addPipeline(new RedisJob51PositionListPipeLine()).thread(5);
   }
 
-  // @Scheduled(cron = "0 0 9/3 * * ?") // 9点开始每3个小时执行一次
-  // @Scheduled(fixedDelay = 70)
-  // public static void runIncrementSpider() {
+  // 从url中截取地区编号
+  private static String getCurrentAreaNumber(String url) {
+    if (url == null) {
+      return null;
+    }
+    String currentAreaNumber = url.substring(url.lastIndexOf("&jl=") + 4, url.indexOf("&isadv="));
+    LOGGER.debug("线程名称:{} ===================> 历史url地区编号:{}, 当前地区编号:{}",
+        Thread.currentThread().getName(), historyAreaNumber, currentAreaNumber);
+    return currentAreaNumber;
+  }
+
   public static void main(String[] args) {
     // spring 容器加载redis
     ConfigurableApplicationContext context =
@@ -57,20 +65,6 @@ public class Job51PositionListPageIncrementProcessor extends BaseJob51PositionPr
     webMagicIOSpider.runAsync();
   }
 
-  // 从url中截取地区编号
-  private static String getCurrentAreaNumber(String url) {
-    if (url == null) {
-      return null;
-    }
-    String currentAreaNumber = url.substring(url.lastIndexOf("/") + 1, url.indexOf(","));
-    LOGGER.debug("线程名称:{} ===================> 历史url地区编号:{}, 当前地区编号:{}",
-        Thread.currentThread().getName(), historyAreaNumber, currentAreaNumber);
-    return currentAreaNumber;
-  }
-
-
-
-  // process是定制爬虫逻辑的核心接口，在这里编写抽取逻辑
   @Override
   public void process(Page page) {
     // 部分二：定义如何抽取页面信息，并保存下来
@@ -78,7 +72,7 @@ public class Job51PositionListPageIncrementProcessor extends BaseJob51PositionPr
     Html html = page.getHtml();
 
     // 部分三: 如果启动时设置了pipeline 就需要到指定类处理抓取后的结果
-    page.putField(RESULT, PositionList.dealPositionList(html));
+    // page.putField(RESULT, BaseJob51PositionProcessor.PositionList.dealPositionList(html));
 
     try {
       // 部分四：发现指定时间内增量url
@@ -89,7 +83,8 @@ public class Job51PositionListPageIncrementProcessor extends BaseJob51PositionPr
           if (!historyAreaNumber.contains(currentNum)) {
             historyAreaNumber.add(currentNum);
             // 这里调用的是获取增量url方法
-            page.addTargetRequests(PositionList.Increment.getIncreUrls(html, currentNum));
+            page.addTargetRequests(
+                BaseZhiLianPositionProcessor.PositionList.Increment.getIncreUrls(html, currentNum));
           }
         }
       }
@@ -100,10 +95,6 @@ public class Job51PositionListPageIncrementProcessor extends BaseJob51PositionPr
     }
   }
 
-
-  public Site getSite() {
-    return SpiderUtil.setSite(site);
-  }
 
 
 }

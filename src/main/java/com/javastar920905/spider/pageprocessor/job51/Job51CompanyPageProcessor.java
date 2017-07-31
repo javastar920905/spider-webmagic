@@ -4,7 +4,6 @@ package com.javastar920905.spider.pageprocessor.job51;
 import java.util.List;
 
 import com.javastar920905.spider.pipeline.job51.RedisJob51CompanyPipeLine;
-import com.javastar920905.spider.util.Job51PositionUtil;
 import com.javastar920905.spider.util.SpiderUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +30,7 @@ import static com.javastar920905.spider.util.StringUtil.RESULT;
  */
 @Deprecated
 @Component
-public class Job51CompanyPageProcessor extends Job51PositionUtil implements PageProcessor {
+public class Job51CompanyPageProcessor extends BaseJob51PositionProcessor implements PageProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(Job51CompanyPageProcessor.class);
   // 部分一：抓取网站的相关配置，包括编码、抓取间隔、重试次数等
   private Site site = Site.me();

@@ -3,7 +3,6 @@ package com.javastar920905.spider.pageprocessor.job51;
 import java.util.List;
 
 import com.javastar920905.spider.pipeline.job51.RedisJob51PositionPipeLine;
-import com.javastar920905.spider.util.Job51PositionUtil;
 import com.javastar920905.spider.util.SpiderConstantKey;
 import com.javastar920905.spider.util.SpiderUtil;
 import com.javastar920905.spider.util.StringUtil;
@@ -54,7 +53,7 @@ import static com.javastar920905.spider.util.StringUtil.RESULT;
  */
 @Component
 @Deprecated
-public class Job51PositionPageProcessor extends Job51PositionUtil implements PageProcessor {
+public class Job51PositionPageProcessor extends BaseJob51PositionProcessor implements PageProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(Job51PositionPageProcessor.class);
   private Site site = Site.me();
   private static Spider webMagicIOSpider = newPositionSpiderInstance();

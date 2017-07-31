@@ -1,4 +1,4 @@
-package com.javastar920905.spider.util;
+package com.javastar920905.spider.pageprocessor.job51;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -8,6 +8,10 @@ import java.util.List;
 import java.util.Vector;
 
 import com.javastar920905.spider.listener.FailedPageListener;
+import com.javastar920905.spider.util.RedisOpsUtil;
+import com.javastar920905.spider.util.SpiderConstantKey;
+import com.javastar920905.spider.util.SpiderUtil;
+import com.javastar920905.spider.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.RedisConnection;
@@ -32,8 +36,8 @@ import static com.javastar920905.spider.util.SpiderConstantKey.Company.*;
  * 
  * 51job 职位列表url
  */
-public class Job51PositionUtil extends SpiderUtil {
-  private static final Logger LOGGER = LoggerFactory.getLogger(Job51PositionUtil.class);
+public class BaseJob51PositionProcessor extends SpiderUtil {
+  private static final Logger LOGGER = LoggerFactory.getLogger(BaseJob51PositionProcessor.class);
   // 启动spider后 主线程没什么事了, 每1分钟循环检查一次数据库中的url
   // 启动spider后 主线程没什么事了, 每隔一段时间循环检查一次数据库中的职位信息
   protected static final long companySpiderSleepInterval = 1000 * 8;
@@ -422,7 +426,7 @@ public class Job51PositionUtil extends SpiderUtil {
         "35", "41", "03", "42", "43", "62", "04", "22", "05", "06", "44", "60", "45", "14", "33",
         "08", "46", "47", "12", "48", "49", "13", "15", "26", "09", "50", "51", "34", "63", "07",
         "59", "52", "18", "23", "24", "11", "53", "17", "54", "27", "21", "55", "19", "16", "36",
-        "61", "56", "28", "57", "20", "29", "58",};
+        "61", "56", "28", "57", "20", "29", "58"};
 
     /* 51job 所有省份和直辖市 */
     private static final String[] provinceValueData = {"030000", "070000", "080000", "090000",
