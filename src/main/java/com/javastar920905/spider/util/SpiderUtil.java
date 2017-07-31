@@ -6,6 +6,7 @@ import us.codecraft.webmagic.selector.Html;
 import us.codecraft.webmagic.utils.UrlUtils;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -55,18 +56,23 @@ public class SpiderUtil {
    * @return
    * @throws Exception
    */
-  public static Html captureHtml(String aimUrl) throws Exception {
-    URL url = new URL(aimUrl);
-    HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
-    InputStreamReader input = new InputStreamReader(httpConn.getInputStream(), "gb2312");
-    BufferedReader bufReader = new BufferedReader(input);
-    String line = "";
-    StringBuilder contentBuf = new StringBuilder();
-    while ((line = bufReader.readLine()) != null) {
-      contentBuf.append(line);
+  public static Html captureHtml(String aimUrl)  {
+    Html html = null;
+    try {
+      URL url = new URL(aimUrl);
+      HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
+      InputStreamReader input = new InputStreamReader(httpConn.getInputStream(), "gb2312");
+      BufferedReader bufReader = new BufferedReader(input);
+      String line = "";
+      StringBuilder contentBuf = new StringBuilder();
+      while ((line = bufReader.readLine()) != null) {
+        contentBuf.append(line);
+      }
+      String webPageString = contentBuf.toString();
+      html = new Html(webPageString, aimUrl);
+    } catch (IOException e) {
+      System.err.println("抓取页面信息失败 ! " + aimUrl);
     }
-    String webPageString = contentBuf.toString();
-    Html html = new Html(webPageString, aimUrl);
     return html;
   }
 }

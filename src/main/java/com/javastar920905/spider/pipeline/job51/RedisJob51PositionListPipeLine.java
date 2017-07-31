@@ -14,6 +14,8 @@ import us.codecraft.webmagic.ResultItems;
 import us.codecraft.webmagic.Task;
 import us.codecraft.webmagic.pipeline.Pipeline;
 
+import static com.javastar920905.spider.util.SpiderConstantKey.COMPANY_JSON;
+import static com.javastar920905.spider.util.SpiderConstantKey.POSITION_JSON;
 import static com.javastar920905.spider.util.StringUtil.RESULT;
 
 /**
@@ -33,13 +35,25 @@ public class RedisJob51PositionListPipeLine extends RedisOpsUtil implements Pipe
       if (jsonArray != null) {
         for (Object positionObj : jsonArray) {
           String positionString = JSONObject.toJSONString(positionObj);
-          JSONObject positionJson = JSONObject.parseObject(positionString);
-          connection.rPush(KEY_JOB51_POSITION_LINK,
-              positionJson.getString("positionLink").getBytes());
+          JSONObject positionExtraJson = JSONObject.parseObject(positionString);
+          String positionLink = positionExtraJson.getString("positionLink");
+          if (positionLink.startsWith("http://jobs.51job.com")) {
+            JSONObject positionJson = positionExtraJson.getJSONObject(POSITION_JSON);
+            JSONObject companyJson = positionExtraJson.getJSONObject(COMPANY_JSON);
+            if (positionJson != null) {
+              connection.rPush(KEY_JOB51_POSITION_DETAIL, positionJson.toJSONString().getBytes());
+              connection.rPush(KEY_JOB51_COMPANY_DETAIL, companyJson.toJSONString().getBytes());
+            }
+          } else {
+            // 美团职位等子域名 需要单独扒取 http://meituan.51job.com/sc/job_shuoming.php?jobid=87517160
+            // http://hundsun.51job.com/sc/show_job_detail.php?jobid=80057520
+            // http://career.dell.51job.com/jobinfo.php?jobid=83925993
+            // connection.rPush(KEY_JOB51_POSITION_DIY_LINK, positionLink.getBytes());
+          }
+
         }
       }
     } catch (Exception e) {
-      closeRedisConnection(connection);
       LOGGER.error("存取结果失败 {}", resultItems.getRequest().getUrl(), e);
     } finally {
       closeRedisConnection(connection);

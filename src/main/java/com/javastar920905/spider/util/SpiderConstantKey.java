@@ -6,6 +6,7 @@ package com.javastar920905.spider.util;
  */
 public interface SpiderConstantKey {
   String COMPANY_JSON = "companyJson";
+  String POSITION_JSON = "positionJson";
   String ID = "id";
 
   interface Position {
