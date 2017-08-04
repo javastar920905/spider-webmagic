@@ -25,10 +25,13 @@ public class RedisOpsUtil {
    * 职位详情key
    */
   public static final byte[] KEY_JOB51_POSITION_DETAIL = "spider:job51:detail:position".getBytes();
+  public static final byte[] KEY_ZHILIAN_POSITION_DETAIL =
+      "spider:zhilian:detail:position".getBytes();
   /**
    * 公司详情key
    */
   public static final byte[] KEY_JOB51_COMPANY_DETAIL = "spider:job51:detail:company".getBytes();
+  public static final byte[] KEY_ZHILIAN_COMPANY_DETAIL = "spider:zhilian:detail:company".getBytes();
   private static final String PAGE_NUM = "pageNum";
 
 

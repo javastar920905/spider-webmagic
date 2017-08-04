@@ -49,7 +49,7 @@ public class SpiderUtil {
    * @return
    * @throws Exception
    */
-  public static Html captureHtml(String aimUrl) {
+  public static Html captureHtml(String aimUrl,String charset) {
     if (aimUrl == null) {
       return null;
     }
@@ -57,7 +57,7 @@ public class SpiderUtil {
     try {
       URL url = new URL(aimUrl);
       HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
-      InputStreamReader input = new InputStreamReader(httpConn.getInputStream(), "gb2312");
+      InputStreamReader input = new InputStreamReader(httpConn.getInputStream(), charset);
       BufferedReader bufReader = new BufferedReader(input);
       String line = "";
       StringBuilder contentBuf = new StringBuilder();

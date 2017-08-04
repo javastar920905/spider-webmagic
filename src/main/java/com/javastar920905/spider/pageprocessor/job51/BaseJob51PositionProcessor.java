@@ -30,6 +30,7 @@ import static com.javastar920905.spider.util.RedisOpsUtil.getRedisConnection;
 import static com.javastar920905.spider.util.SpiderConstantKey.*;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.*;
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.*;
+import static com.javastar920905.spider.util.StringUtil.GB2312_CHARSET;
 
 /**
  * Created by ouzhx on 2017/7/6.
@@ -303,7 +304,7 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
     }
 
     private static JSONObject dealPositionInfo(String url) {
-      Html html = SpiderUtil.captureHtml(url);
+      Html html = SpiderUtil.captureHtml(url,GB2312_CHARSET);
       if (html == null) {
         return null;
       }
@@ -370,7 +371,7 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
 
 
     private static JSONObject dealCompanyJson(String url) {
-      Html html = SpiderUtil.captureHtml(url);
+      Html html = SpiderUtil.captureHtml(url,GB2312_CHARSET);
       // 公司信息获取
       String companyId = html.xpath("//*[@id=\"hidCOID\"]").$("input", "value").get(); // id
       if (companyId != null && !StringUtils.isEmpty(companyId)) {

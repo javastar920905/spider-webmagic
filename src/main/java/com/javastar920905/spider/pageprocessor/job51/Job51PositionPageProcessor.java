@@ -43,6 +43,7 @@ import static com.javastar920905.spider.util.SpiderConstantKey.Position.SALARY;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.WELFARE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.WORKPLACE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.WORK_EXPERIENCE;
+import static com.javastar920905.spider.util.StringUtil.GB2312_CHARSET;
 import static com.javastar920905.spider.util.StringUtil.RESULT;
 
 /**
@@ -172,7 +173,7 @@ public class Job51PositionPageProcessor extends BaseJob51PositionProcessor imple
         json.put(JOB_DESC, positionDesc);
         // 抓取公司详情
         if (StringUtil.isNotEmpty(companyLink)) {
-          json.put(COMPANY_JSON, dealCompanyJson(captureHtml(companyLink)));
+          json.put(COMPANY_JSON, dealCompanyJson(captureHtml(companyLink,GB2312_CHARSET)));
         }
         // 部分三: 如果启动时设置了pipeline 就需要到指定类处理抓取后的结果
         page.putField(RESULT, json);

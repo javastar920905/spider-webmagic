@@ -1,5 +1,7 @@
 package com.javastar920905.spider.pageprocessor.zhilian;
 
+import static com.javastar920905.spider.util.StringUtil.RESULT;
+
 import java.util.List;
 import java.util.Vector;
 
@@ -9,7 +11,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import com.javastar920905.spider.config.RedisConfig;
-import com.javastar920905.spider.pipeline.job51.RedisJob51PositionListPipeLine;
+import com.javastar920905.spider.pipeline.zhilian.RedisZhilianPositionListPipeLine;
 import com.javastar920905.spider.util.SpiderUtil;
 
 import us.codecraft.webmagic.Page;
@@ -40,7 +42,7 @@ public class ZhiLianPositionListPageIncrementProcessor extends BaseZhiLianPositi
   private static Spider newInstance() {
     return Spider.create(new ZhiLianPositionListPageIncrementProcessor())
         .addRequest(getRequest(BaseZhiLianPositionProcessor.PositionList.Increment.fistPage))
-        .addPipeline(new RedisJob51PositionListPipeLine()).thread(5);
+        .addPipeline(new RedisZhilianPositionListPipeLine()).thread(5);
   }
 
   // 从url中截取地区编号
@@ -54,16 +56,17 @@ public class ZhiLianPositionListPageIncrementProcessor extends BaseZhiLianPositi
     return currentAreaNumber;
   }
 
+
+  // spring 容器加载redis
   public static void main(String[] args) {
-    // spring 容器加载redis
     ConfigurableApplicationContext context =
         new AnnotationConfigApplicationContext(SpiderUtil.class, RedisConfig.class);
     LOGGER.info("runIncrementSpider begin! ...");
 
-    // 发起页面请求,开启5个线程并启动爬虫
     Spider webMagicIOSpider = newInstance();
     webMagicIOSpider.runAsync();
   }
+
 
   @Override
   public void process(Page page) {
@@ -72,7 +75,7 @@ public class ZhiLianPositionListPageIncrementProcessor extends BaseZhiLianPositi
     Html html = page.getHtml();
 
     // 部分三: 如果启动时设置了pipeline 就需要到指定类处理抓取后的结果
-    // page.putField(RESULT, BaseJob51PositionProcessor.PositionList.dealPositionList(html));
+    page.putField(RESULT, PositionList.dealPositionList(html));
 
     try {
       // 部分四：发现指定时间内增量url

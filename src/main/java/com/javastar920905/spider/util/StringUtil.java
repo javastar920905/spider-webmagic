@@ -33,6 +33,7 @@ public class StringUtil extends StringUtils {
   public static final String LONG_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
   public static final String SHORT_DATE_FORMAT = "yyyy-MM-dd";
   public static final String UTF8_CHARSET = "UTF-8";
+  public static final String GB2312_CHARSET = "gb2312";
   public static final Charset CHARSET = Charset.forName("UTF-8");
   // </editor-fold>
 
