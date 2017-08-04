@@ -30,9 +30,9 @@ public class RedisJob51PositionListPipeLine extends RedisOpsUtil implements Pipe
     // 将请求发送到消息队列,空闲时处理
     RedisConnection connection = null;
     try {
-      connection = getRedisConnection();
       JSONArray jsonArray = resultItems.get(RESULT);
-      if (jsonArray != null) {
+      if (jsonArray != null&&jsonArray.size()>0) {
+        connection = getRedisConnection();
         for (Object positionObj : jsonArray) {
           String positionString = JSONObject.toJSONString(positionObj);
           JSONObject positionExtraJson = JSONObject.parseObject(positionString);
