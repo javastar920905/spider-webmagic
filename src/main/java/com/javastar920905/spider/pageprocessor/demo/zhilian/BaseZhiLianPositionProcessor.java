@@ -1,24 +1,35 @@
-package com.javastar920905.spider.pageprocessor.zhilian;
+package com.javastar920905.spider.pageprocessor.demo.zhilian;
 
-import static com.javastar920905.spider.util.RedisOpsUtil.closeRedisConnection;
-import static com.javastar920905.spider.util.RedisOpsUtil.getRedisConnection;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.javastar920905.spider.util.SpiderConstantKey;
+import com.javastar920905.spider.util.SpiderUtil;
+import com.javastar920905.spider.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
+import us.codecraft.webmagic.selector.Html;
+import us.codecraft.webmagic.selector.Selectable;
+
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.util.LinkedList;
+import java.util.List;
+
 import static com.javastar920905.spider.util.SpiderConstantKey.COMPANY_JSON;
-import static com.javastar920905.spider.util.SpiderConstantKey.ID;
-import static com.javastar920905.spider.util.SpiderConstantKey.POSITION_JSON;
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.COMPANY_ADDRESS;
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.LOGO;
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.NAME;
-import static com.javastar920905.spider.util.SpiderConstantKey.Company.OFFICE_ENVIRONMENT;
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.PROFILE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.SOURCE;
-import static com.javastar920905.spider.util.SpiderConstantKey.Company.WEBSITE;
+import static com.javastar920905.spider.util.SpiderConstantKey.ID;
+import static com.javastar920905.spider.util.SpiderConstantKey.POSITION_JSON;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.CITY;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.COMPANY_LINK;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.COMPANY_NAME;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.DEGREE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.JOB_DESC;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.JOB_NATURE;
-import static com.javastar920905.spider.util.SpiderConstantKey.Position.LABEL_LIST;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_LINK;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_NAME;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_TITLE;
@@ -28,34 +39,6 @@ import static com.javastar920905.spider.util.SpiderConstantKey.Position.WELFARE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.WORKPLACE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.WORK_EXPERIENCE;
 import static com.javastar920905.spider.util.StringUtil.UTF8_CHARSET;
-
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Vector;
-
-import org.apache.http.client.utils.URLEncodedUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.util.StringUtils;
-
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
-import com.javastar920905.spider.listener.FailedPageListener;
-import com.javastar920905.spider.util.RedisOpsUtil;
-import com.javastar920905.spider.util.SpiderConstantKey;
-import com.javastar920905.spider.util.SpiderUtil;
-import com.javastar920905.spider.util.StringUtil;
-
-import us.codecraft.webmagic.Request;
-import us.codecraft.webmagic.SpiderListener;
-import us.codecraft.webmagic.selector.Html;
-import us.codecraft.webmagic.selector.Selectable;
 
 /**
  * Created by ouzhx on 2017/7/6.

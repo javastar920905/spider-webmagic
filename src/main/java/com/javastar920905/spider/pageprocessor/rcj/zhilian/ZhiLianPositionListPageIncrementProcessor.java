@@ -41,7 +41,7 @@ public class ZhiLianPositionListPageIncrementProcessor extends BaseZhiLianPositi
     private static Spider newInstance() {
         return Spider.create(new ZhiLianPositionListPageIncrementProcessor())
             .addRequest(getRequest(BaseZhiLianPositionProcessor.PositionList.Increment.fistPage))
-            .addPipeline(new RedisZhilianPositionListPipeLine()).thread(20);
+            .addPipeline(new RedisZhilianPositionListPipeLine()).thread(50);
     }
 
     // 从url中截取地区编号

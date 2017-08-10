@@ -1,4 +1,4 @@
-package com.javastar920905.spider.pageprocessor.zhilian;
+package com.javastar920905.spider.pageprocessor.demo.zhilian;
 
 import static com.javastar920905.spider.util.StringUtil.RESULT;
 

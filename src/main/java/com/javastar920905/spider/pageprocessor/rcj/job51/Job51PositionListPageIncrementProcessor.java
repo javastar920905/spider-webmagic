@@ -37,7 +37,7 @@ public class Job51PositionListPageIncrementProcessor extends BaseJob51PositionPr
   private static Spider newInstance() {
     return Spider.create(new Job51PositionListPageIncrementProcessor())
         .addRequest(getRequest(fistPage))
-        .addPipeline(new RedisJob51PositionListPipeLine()).thread(20);
+        .addPipeline(new RedisJob51PositionListPipeLine()).thread(40);
   }
 
   public static void runIncrementSpider() {
