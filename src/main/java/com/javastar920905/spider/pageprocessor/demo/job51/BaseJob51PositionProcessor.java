@@ -30,6 +30,7 @@ import static com.javastar920905.spider.util.RedisOpsUtil.getRedisConnection;
 import static com.javastar920905.spider.util.SpiderConstantKey.*;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.*;
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.*;
+import static com.javastar920905.spider.util.SpiderConstantKey.SOURCE;
 import static com.javastar920905.spider.util.StringUtil.GB2312_CHARSET;
 
 /**
