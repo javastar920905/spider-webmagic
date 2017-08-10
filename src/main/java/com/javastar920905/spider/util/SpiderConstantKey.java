@@ -8,6 +8,7 @@ public interface SpiderConstantKey {
   String COMPANY_JSON = "companyJson";
   String POSITION_JSON = "positionJson";
   String ID = "id";
+  String SOURCE = "source";
 
   interface Position {
     // 职位链接
