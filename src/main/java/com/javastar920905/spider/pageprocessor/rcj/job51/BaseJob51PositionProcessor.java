@@ -1,28 +1,52 @@
 package com.javastar920905.spider.pageprocessor.rcj.job51;
 
 
+import static com.javastar920905.spider.util.SpiderConstantKey.COMPANY_JSON;
+import static com.javastar920905.spider.util.SpiderConstantKey.ID;
+import static com.javastar920905.spider.util.SpiderConstantKey.POSITION_JSON;
+import static com.javastar920905.spider.util.SpiderConstantKey.SOURCE;
+import static com.javastar920905.spider.util.SpiderConstantKey.Company.COMPANY_ADDRESS;
+import static com.javastar920905.spider.util.SpiderConstantKey.Company.LOGO;
+import static com.javastar920905.spider.util.SpiderConstantKey.Company.NAME;
+import static com.javastar920905.spider.util.SpiderConstantKey.Company.OFFICE_ENVIRONMENT;
+import static com.javastar920905.spider.util.SpiderConstantKey.Company.PROFILE;
+import static com.javastar920905.spider.util.SpiderConstantKey.Company.WEBSITE;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.COMPANY_LINK;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.COMPANY_NAME;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.DEGREE;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.JOB_DESC;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.LABEL_LIST;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_LANGUAGE_REQUIREMENTS;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_LINK;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_MAJOR_REQUIREMENT;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_NAME;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_TITLE;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.PUBLISHED_DATE;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.SALARY;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.WELFARE;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.WORKPLACE;
+import static com.javastar920905.spider.util.SpiderConstantKey.Position.WORK_EXPERIENCE;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import com.javastar920905.spider.util.SpiderConstantKey;
-import com.javastar920905.spider.util.SpiderUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.util.StringUtils;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.javastar920905.spider.util.RedisOpsUtil;
+import com.javastar920905.spider.util.SpiderConstantKey;
+import com.javastar920905.spider.util.SpiderUtil;
 
 import us.codecraft.webmagic.selector.Html;
 import us.codecraft.webmagic.selector.Selectable;
-
-import static com.javastar920905.spider.util.SpiderConstantKey.*;
-import static com.javastar920905.spider.util.SpiderConstantKey.Company.*;
-import static com.javastar920905.spider.util.SpiderConstantKey.Position.*;
-import static com.javastar920905.spider.util.SpiderConstantKey.SOURCE;
 
 /**
  * Created by ouzhx on 2017/7/6.
@@ -118,16 +142,14 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
     /**
      * 获取指定时间段内 的增量url (省份+行业)排列組合 *pageSize
      */
-    public static List<String> getIncreUrls(Html html, String provinceNumber) {
-      // 第一页已经在request中请求了,<=pageSize页需要请求
-      List<String> urls = new LinkedList();
-
-      // 生成请求列表[(省份i~行业n),(地区i+1,行业1)]
+    public static void generateIncreUrls() {
       int areaIndex = 0;
-      boolean canExit = false;
       int allprovinceSize = allProvinceValueData.size();
-      for (; areaIndex < allprovinceSize; areaIndex++) {
-        if (allProvinceValueData.get(areaIndex).equals(provinceNumber)) {
+
+      try {
+        RedisConnection connection = RedisOpsUtil.getRedisConnection();
+        for (; areaIndex < allprovinceSize; areaIndex++) {
+          String provinceNumber = allProvinceValueData.get(areaIndex);
           if (provinceValueData_hot_list.contains(provinceNumber)) {
             // 热门地区加行业组合 热门城市7*行业60=420
             for (String industryNum : industryData) {
@@ -136,7 +158,8 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
               int pageSize = getPageSize(url + 1 + pageUrl_suffix);
               int pageNum = 1;
               for (; pageNum <= pageSize; pageNum++) {
-                urls.add(url + pageNum + pageUrl_suffix);
+                connection.lPush(RedisOpsUtil.KEY_51JOB_LIST_URLS,
+                    (url + pageNum + pageUrl_suffix).getBytes());
               }
             }
           } else {
@@ -146,24 +169,29 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
             int pageSize = getPageSize(url + 1 + pageUrl_suffix);
             int pageNum = 1;
             for (; pageNum <= pageSize; pageNum++) {
-              urls.add(url + pageNum + pageUrl_suffix);
+              connection.lPush(RedisOpsUtil.KEY_51JOB_LIST_URLS,
+                  (url + pageNum + pageUrl_suffix).getBytes());
             }
           }
-
-          canExit = true;// 可以终止最外层循环了
-        } else {
-          if (canExit) {
-            break;
-          }
         }
+        connection.close();
+      } catch (DataAccessException e) {
+        e.printStackTrace();
       }
-      if (areaIndex < allprovinceSize) {// 退出循环时areaIndex已经+1了
-        String changeCityUrl = "http://search.51job.com/list/" + allProvinceValueData.get(areaIndex)
-            + ",000000,0000,00," + timeNumber + ",99,%2B,1," + 1 + pageUrl_suffix;
-        urls.add(changeCityUrl);
-        LOGGER.info(" 当前城市所有url数量为:{},当前下标为{},下一个对应城市为:{},列表最后一条url:为{} ", urls.size(), areaIndex,
-            allProvinceValueData.get(areaIndex), changeCityUrl);
-      }
+    }
+
+    /**
+     * 获取一定数量的需要爬取的url
+     *
+     * @throws Exception
+     */
+    public static List<String> getIncreUrls() throws Exception {
+      RedisConnection connection = RedisOpsUtil.getRedisConnection();
+      // 获取前50条url
+      List<byte[]> positionUrlList = connection.lRange(RedisOpsUtil.KEY_51JOB_LIST_URLS, 0, 49);
+      connection.lTrim(RedisOpsUtil.KEY_51JOB_LIST_URLS, 49, -1);
+      connection.close();
+      List<String> urls = RedisOpsUtil.getStringList(positionUrlList);
       return urls;
     }
   }
