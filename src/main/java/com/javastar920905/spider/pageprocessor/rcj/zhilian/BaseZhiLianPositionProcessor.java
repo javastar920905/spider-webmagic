@@ -118,7 +118,7 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
                   int pageSize = getPageSize(url + "&p=1");
                   int pageNum = 1;
                   for (; pageNum <= pageSize; pageNum++) {
-                    connection.lPush(RedisOpsUtil.KEY_ZHILIAN_LIST_URLS,
+                    connection.rPush(RedisOpsUtil.KEY_ZHILIAN_LIST_URLS,
                         (url + "&p=" + pageNum).getBytes());
                   }
                 }
@@ -131,7 +131,7 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
                 int pageNum = 1;
                 // 非热门行业38*城市390=14820 *页码
                 for (; pageNum <= pageSize; pageNum++) {
-                  connection.lPush(RedisOpsUtil.KEY_ZHILIAN_LIST_URLS,
+                  connection.rPush(RedisOpsUtil.KEY_ZHILIAN_LIST_URLS,
                       (url + "&p=" + pageNum).getBytes());
                 }
               }

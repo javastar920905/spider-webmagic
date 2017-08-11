@@ -158,7 +158,7 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
               int pageSize = getPageSize(url + 1 + pageUrl_suffix);
               int pageNum = 1;
               for (; pageNum <= pageSize; pageNum++) {
-                connection.lPush(RedisOpsUtil.KEY_51JOB_LIST_URLS,
+                connection.rPush(RedisOpsUtil.KEY_51JOB_LIST_URLS,
                     (url + pageNum + pageUrl_suffix).getBytes());
               }
             }
@@ -169,7 +169,7 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
             int pageSize = getPageSize(url + 1 + pageUrl_suffix);
             int pageNum = 1;
             for (; pageNum <= pageSize; pageNum++) {
-              connection.lPush(RedisOpsUtil.KEY_51JOB_LIST_URLS,
+              connection.rPush(RedisOpsUtil.KEY_51JOB_LIST_URLS,
                   (url + pageNum + pageUrl_suffix).getBytes());
             }
           }
