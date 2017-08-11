@@ -23,7 +23,12 @@ public class RedisConfig {
   public JedisConnectionFactory jedisConnectionFactory() {
     JedisConnectionFactory factory = new JedisConnectionFactory();
     factory.setUsePool(true);
-    factory.setPoolConfig(new JedisPoolConfig());
+
+    JedisPoolConfig poolConfig=new JedisPoolConfig();
+    /*poolConfig.setMaxTotal(200);
+    poolConfig.setMaxIdle(50);
+    poolConfig.setMinIdle(5);*/
+    factory.setPoolConfig(poolConfig);
     factory.setHostName(Host);
     factory.setPort(port);
     return factory;
