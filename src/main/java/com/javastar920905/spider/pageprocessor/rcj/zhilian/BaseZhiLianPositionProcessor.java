@@ -101,41 +101,49 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
       public static void generateIncreUrls() {
         int areaIndex = 0;
         int cityDatalen = allAreaValueData.size();
-
         try {
           RedisConnection connection = RedisOpsUtil.getRedisConnection();
           for (; areaIndex < cityDatalen; areaIndex++) {
             String provinceNumber = allAreaValueData.get(areaIndex);
-            for (String industryNum : allIndustryValueData) {
-              // 北京 上海 等热门城市的热门行业 需要+职能单独处理 热门行业14*热门城市13*职能59 =10738 *页码
-              if (areaValueData_hot_list.contains(provinceNumber)
-                  && industryData_hot_list.contains(industryNum)) {
-                for (String func : funTypeData) {
-                  // 组合方式: 地区+行业+职能
-                  String url = "http://sou.zhaopin.com/jobs/searchresult.ashx?bj=" + func + "&in="
-                      + industryNum + "&jl=" + provinceNumber + "&isadv=0&isfilter=1&pd=1";
-                  // 获取分页次数 热门行业13*职能59=767 耗时10min
+            if (areaValueData_loney_list.contains(provinceNumber)) {
+              // 组合方式:地区+今天 ;获取分页次数 非热门地区数目384
+              String url = "http://sou.zhaopin.com/jobs/searchresult.ashx?jl=" + provinceNumber
+                  + "&isadv=0&isfilter=1&pd=1";
+              int pageSize = getPageSize(url + "&p=1");
+              int pageNum = 1;
+              for (; pageNum <= pageSize; pageNum++) {
+                connection.rPush(RedisOpsUtil.KEY_ZHILIAN_LIST_URLS,
+                    (url + "&p=" + pageNum).getBytes());
+              }
+            } else {
+              for (String industryNum : allIndustryValueData) {
+                // 北京 上海 等热门城市的热门行业 需要+职能单独处理 热门行业14*热门城市12*职能59 =9912 *页码
+                if (areaValueData_hot_list.contains(provinceNumber)
+                    && industryData_hot_list.contains(industryNum)) {
+                  for (String func : funTypeData) {
+                    // 组合方式: 地区+行业+职能
+                    String url = "http://sou.zhaopin.com/jobs/searchresult.ashx?bj=" + func + "&in="
+                        + industryNum + "&jl=" + provinceNumber + "&isadv=0&isfilter=1&pd=1";
+                    // 获取分页次数 热门行业13*职能59=767 耗时10min
+                    int pageSize = getPageSize(url + "&p=1");
+                    int pageNum = 1;
+                    for (; pageNum <= pageSize; pageNum++) {
+                      connection.rPush(RedisOpsUtil.KEY_ZHILIAN_LIST_URLS,
+                          (url + "&p=" + pageNum).getBytes());
+                    }
+                  }
+                } else {
+                  // 组合方式:地区+行业
+                  String url = "http://sou.zhaopin.com/jobs/searchresult.ashx?in=" + industryNum
+                      + "&jl=" + provinceNumber + "&isadv=0&isfilter=1&pd=1"; // 获取分页次数 非热门行业数目38
                   int pageSize = getPageSize(url + "&p=1");
-                  int pageNum = 1;
+                  int pageNum = 1; // 非热门行业38*城市(5+12)=646 *页码
                   for (; pageNum <= pageSize; pageNum++) {
                     connection.rPush(RedisOpsUtil.KEY_ZHILIAN_LIST_URLS,
                         (url + "&p=" + pageNum).getBytes());
                   }
                 }
-              } else {
-                // 组合方式:地区+行业
-                String url = "http://sou.zhaopin.com/jobs/searchresult.ashx?in=" + industryNum
-                    + "&jl=" + provinceNumber + "&isadv=0&isfilter=1&pd=1";
-                // 获取分页次数 非热门行业数目38
-                int pageSize = getPageSize(url + "&p=1");
-                int pageNum = 1;
-                // 非热门行业38*城市390=14820 *页码
-                for (; pageNum <= pageSize; pageNum++) {
-                  connection.rPush(RedisOpsUtil.KEY_ZHILIAN_LIST_URLS,
-                      (url + "&p=" + pageNum).getBytes());
-                }
               }
-
             }
           }
           connection.close();
@@ -320,39 +328,40 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
         "西藏", "甘肃", "青海", "宁夏", "新疆", "香港", "澳门", "台湾省"};
 
 
-    /* 智联所有热门地区编号 */
+    /* 智联所有热门地区编号 组合方式需要 地区+行业+职能才少于5400页 */
     private static final String[] areaValueData_hot =
-        {"北京", "上海", "广州", "深圳", "天津", "武汉", "西安", "成都", "南京", "济南", "杭州", "郑州", "惠州"};
-
-
-    private static final String[] areaValueData = {"韶关", "珠海", "汕头", "佛山", "江门", "湛江", "茂名", "肇庆",
-        "梅州", "汕尾", "河源", "阳江", "清远", "东莞", "中山", "潮州", "揭阳", "云浮", "黄石", "十堰", "宜昌", "襄阳", "鄂州",
-        "荆门", "孝感", "荆州", "黄冈", "咸宁", "随州", "恩施", "公安", "武穴", "天门", "仙桃", "潜江", "宜城", "神农架", "铜川",
-        "宝鸡", "咸阳", "渭南", "延安", "汉中", "榆林", "安康", "商洛", "兴平", "杨凌", "西咸新区", "自贡", "攀枝花", "泸州", "德阳",
-        "绵阳", "广元", "遂宁", "内江", "乐山", "南充", "眉山", "宜宾", "广安", "达州", "雅安", "巴中", "资阳", "阿坝", "甘孜",
-        "凉山", "峨眉", "西昌", "简阳", "大连", "沈阳", "鞍山", "抚顺", "本溪", "丹东", "锦州", "营口", "阜新", "辽阳", "盘锦",
-        "铁岭", "朝阳", "葫芦岛", "兴城", "海城", "昌图", "开原", "东港", "长春", "珲春", "吉林市", "四平", "辽源", "通化", "白山",
-        "松原", "白城", "延边", "公主岭", "苏州", "昆山", "常熟", "张家港", "无锡", "江阴", "徐州", "常州", "南通", "连云港", "淮安",
-        "盐城", "扬州", "镇江", "泰州", "宿迁", "太仓市", "宜兴", "青岛", "淄博", "枣庄", "东营", "烟台", "潍坊", "济宁", "泰安",
+        {"北京", "上海", "广州", "深圳", "天津", "武汉", "西安", "成都", "南京", "济南", "杭州", "郑州"};
+    /* 组合方式需要 地区+行业才少于5400页 */
+    private static final String[] areaValueData = {"沈阳", "苏州", "青岛", "合肥", "石家庄"};
+    /* 智联所有冷门地区编号 地区+时间<5400页 */
+    private static final String[] areaValueData_loney = {"惠州", "韶关", "珠海", "汕头", "佛山", "江门", "湛江",
+        "茂名", "肇庆", "梅州", "汕尾", "河源", "阳江", "清远", "东莞", "中山", "潮州", "揭阳", "云浮", "黄石", "十堰", "宜昌",
+        "襄阳", "鄂州", "荆门", "孝感", "荆州", "黄冈", "咸宁", "随州", "恩施", "公安", "武穴", "天门", "仙桃", "潜江", "宜城",
+        "神农架", "铜川", "宝鸡", "咸阳", "渭南", "延安", "汉中", "榆林", "安康", "商洛", "兴平", "杨凌", "西咸新区", "自贡",
+        "攀枝花", "泸州", "德阳", "绵阳", "广元", "遂宁", "内江", "乐山", "南充", "眉山", "宜宾", "广安", "达州", "雅安", "巴中",
+        "资阳", "阿坝", "甘孜", "凉山", "峨眉", "西昌", "简阳", "大连", "鞍山", "抚顺", "本溪", "丹东", "锦州", "营口", "阜新",
+        "辽阳", "盘锦", "铁岭", "朝阳", "葫芦岛", "兴城", "海城", "昌图", "开原", "东港", "长春", "珲春", "吉林市", "四平", "辽源",
+        "通化", "白山", "松原", "白城", "延边", "公主岭", "昆山", "常熟", "张家港", "无锡", "江阴", "徐州", "常州", "南通", "连云港",
+        "淮安", "盐城", "扬州", "镇江", "泰州", "宿迁", "太仓市", "宜兴", "淄博", "枣庄", "东营", "烟台", "潍坊", "济宁", "泰安",
         "威海", "日照", "莱芜", "临沂", "德州", "聊城", "滨州", "菏泽", "宁波", "温州", "嘉兴", "湖州", "绍兴", "金华", "衢州",
         "舟山", "台州", "丽水", "方家山", "南宁", "柳州", "桂林", "梧州", "北海", "防城港", "钦州", "贵港", "玉林", "百色", "贺州",
-        "河池", "来宾", "崇左", "合肥", "芜湖", "蚌埠", "淮南", "马鞍山", "淮北", "铜陵", "安庆", "黄山", "滁州", "阜阳", "宿州",
-        "六安", "亳州", "池州", "宣城", "凤阳", "广德", "宿松", "石家庄", "唐山", "秦皇岛", "邯郸", "邢台", "保定", "张家口", "承德",
-        "沧州", "廊坊", "衡水", "遵化", "太原", "大同", "阳泉", "长治", "晋城", "朔州", "晋中", "运城", "忻州", "临汾", "吕梁",
-        "永济市", "呼和浩特", "包头", "乌海", "赤峰", "通辽", "鄂尔多斯", "呼伦贝尔", "兴安盟", "锡林郭勒盟", "乌兰察布", "巴彦淖尔",
-        "阿拉善盟", "乌审旗", "满洲里", "哈尔滨", "齐齐哈尔", "鸡西", "鹤岗", "双鸭山", "大庆", "伊春", "佳木斯", "七台河", "牡丹江",
-        "黑河", "绥化", "大兴安岭", "安达", "双城", "尚志", "绥芬河", "肇东市", "福州", "厦门", "莆田", "三明", "泉州", "漳州",
-        "南平", "龙岩", "宁德", "南昌", "景德镇", "萍乡", "九江", "新余", "鹰潭", "赣州", "吉安", "宜春", "抚州", "上饶", "开封",
-        "洛阳", "平顶山", "安阳", "鹤壁", "新乡", "焦作", "濮阳", "许昌", "漯河", "三门峡", "南阳", "商丘", "信阳", "周口", "驻马店",
-        "济源", "西平", "长沙", "株洲", "湘潭", "衡阳", "邵阳", "岳阳", "常德", "张家界", "益阳", "郴州", "永州", "怀化", "娄底",
-        "湘西", "海口", "三亚", "洋浦市/洋浦经济开发区", "琼海", "儋州", "五指山", "文昌", "万宁", "东方", "定安", "屯昌", "澄迈",
-        "临高", "琼中", "保亭", "白沙", "昌江", "乐东", "陵水", "贵阳", "六盘水", "遵义", "安顺", "铜仁", "黔西南", "毕节", "黔东南",
-        "黔南", "昆明", "曲靖", "玉溪", "保山", "昭通", "楚雄", "红河", "文山", "西双版纳", "大理", "德宏", "丽江", "怒江", "迪庆",
-        "临沧", "普洱", "拉萨", "昌都", "山南", "日喀则", "那曲", "阿里", "林芝", "兰州", "嘉峪关", "金昌", "白银", "天水", "武威",
-        "张掖", "平凉", "酒泉", "庆阳", "定西", "陇南", "临夏", "甘南", "西宁", "海东", "海北", "黄南", "海南州", "果洛", "玉树",
-        "海西", "银川", "石嘴山", "吴忠", "固原", "中卫", "乌鲁木齐", "克拉玛依", "吐鲁番", "哈密", "昌吉", "博尔塔拉", "巴音郭楞",
-        "阿克苏", "克孜勒苏", "喀什", "和田", "伊犁", "塔城", "阿勒泰", "石河子", "奎屯市", "乌苏", "阿拉尔", "图木舒克", "五家渠",
-        "北屯市", "香港", "澳门", "台湾省"};
+        "河池", "来宾", "崇左", "芜湖", "蚌埠", "淮南", "马鞍山", "淮北", "铜陵", "安庆", "黄山", "滁州", "阜阳", "宿州", "六安",
+        "亳州", "池州", "宣城", "凤阳", "广德", "宿松", "唐山", "秦皇岛", "邯郸", "邢台", "保定", "张家口", "承德", "沧州", "廊坊",
+        "衡水", "遵化", "太原", "大同", "阳泉", "长治", "晋城", "朔州", "晋中", "运城", "忻州", "临汾", "吕梁", "永济市", "呼和浩特",
+        "包头", "乌海", "赤峰", "通辽", "鄂尔多斯", "呼伦贝尔", "兴安盟", "锡林郭勒盟", "乌兰察布", "巴彦淖尔", "阿拉善盟", "乌审旗",
+        "满洲里", "哈尔滨", "齐齐哈尔", "鸡西", "鹤岗", "双鸭山", "大庆", "伊春", "佳木斯", "七台河", "牡丹江", "黑河", "绥化",
+        "大兴安岭", "安达", "双城", "尚志", "绥芬河", "肇东市", "福州", "厦门", "莆田", "三明", "泉州", "漳州", "南平", "龙岩",
+        "宁德", "南昌", "景德镇", "萍乡", "九江", "新余", "鹰潭", "赣州", "吉安", "宜春", "抚州", "上饶", "开封", "洛阳", "平顶山",
+        "安阳", "鹤壁", "新乡", "焦作", "濮阳", "许昌", "漯河", "三门峡", "南阳", "商丘", "信阳", "周口", "驻马店", "济源", "西平",
+        "长沙", "株洲", "湘潭", "衡阳", "邵阳", "岳阳", "常德", "张家界", "益阳", "郴州", "永州", "怀化", "娄底", "湘西", "海口",
+        "三亚", "洋浦市/洋浦经济开发区", "琼海", "儋州", "五指山", "文昌", "万宁", "东方", "定安", "屯昌", "澄迈", "临高", "琼中",
+        "保亭", "白沙", "昌江", "乐东", "陵水", "贵阳", "六盘水", "遵义", "安顺", "铜仁", "黔西南", "毕节", "黔东南", "黔南", "昆明",
+        "曲靖", "玉溪", "保山", "昭通", "楚雄", "红河", "文山", "西双版纳", "大理", "德宏", "丽江", "怒江", "迪庆", "临沧", "普洱",
+        "拉萨", "昌都", "山南", "日喀则", "那曲", "阿里", "林芝", "兰州", "嘉峪关", "金昌", "白银", "天水", "武威", "张掖", "平凉",
+        "酒泉", "庆阳", "定西", "陇南", "临夏", "甘南", "西宁", "海东", "海北", "黄南", "海南州", "果洛", "玉树", "海西", "银川",
+        "石嘴山", "吴忠", "固原", "中卫", "乌鲁木齐", "克拉玛依", "吐鲁番", "哈密", "昌吉", "博尔塔拉", "巴音郭楞", "阿克苏", "克孜勒苏",
+        "喀什", "和田", "伊犁", "塔城", "阿勒泰", "石河子", "奎屯市", "乌苏", "阿拉尔", "图木舒克", "五家渠", "北屯市", "香港", "澳门",
+        "台湾省"};
 
     /* 智联招聘 所有工作职能编号 */
     private static final String[] funTypeData = {"4010200", "7001000", "7002000", "4000000",
@@ -367,21 +376,24 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
 
     private static List<String> areaValueData_hot_list =
         CollectionUtils.arrayToList(areaValueData_hot);
+    private static List<String> areaValueData_loney_list =
+        CollectionUtils.arrayToList(areaValueData_loney);
     private static List<String> industryData_hot_list =
         CollectionUtils.arrayToList(industryData_hot);
     // 智联所有城市数据字典
     private static List<String> allAreaValueData = new ArrayList<>();
     private static List<String> allIndustryValueData = new ArrayList<>();
-
     static {
       CollectionUtils.mergeArrayIntoCollection(areaValueData_hot, allAreaValueData);
+      CollectionUtils.mergeArrayIntoCollection(areaValueData_loney, allAreaValueData);
       CollectionUtils.mergeArrayIntoCollection(areaValueData, allAreaValueData);
       CollectionUtils.mergeArrayIntoCollection(industryData_hot, allIndustryValueData);
       CollectionUtils.mergeArrayIntoCollection(industryData, allIndustryValueData);
       Increment.firstArea = allAreaValueData.get(0);
       LOGGER.info("*************************************************************");
-      LOGGER.info("热门城市数量: {} 普通城市数量:{} 所有城市数量:{},行业数量:{},职能数量:{}", areaValueData_hot.length,
-          areaValueData.length, allAreaValueData.size(), industryData.length, funTypeData.length);
+      LOGGER.info("热门城市数量: {} 普通城市数量:{} 冷门城市数量:{} 所有城市数量:{},行业数量:{},职能数量:{}",
+          areaValueData_hot.length, areaValueData.length, areaValueData_loney.length,
+          allAreaValueData.size(), industryData.length, funTypeData.length);
       LOGGER.info("热门行业数量: {} 普通行业数量:{} 所有行业数量:{}", industryData_hot.length, industryData.length,
           allIndustryValueData.size());
       LOGGER.info("职能数量:{}", funTypeData.length);
