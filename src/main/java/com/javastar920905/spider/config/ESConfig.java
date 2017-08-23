@@ -38,7 +38,7 @@ public class ESConfig {
     BulkProcessor bulkProcessor = BulkProcessor.builder(client, new BulkProcessor.Listener() {
       @Override
       public void beforeBulk(long executionId, BulkRequest request) {
-        System.out.println("开始执行es批处理操作");
+        //System.out.println("开始执行es批处理操作");
       }
 
       @Override
@@ -50,7 +50,7 @@ public class ESConfig {
       public void afterBulk(long executionId, BulkRequest request, Throwable failure) {
         System.err.println("执行es批处理操作失败");
       }
-    }).setBulkActions(120).setBulkSize(new ByteSizeValue(5, ByteSizeUnit.MB))// 每1w(默认1k)请求执行一次bulk,每5mb刷新一次缓存
+    }).setBulkActions(1000).setBulkSize(new ByteSizeValue(5, ByteSizeUnit.MB))// 每1k(默认1k)请求执行一次bulk,每5mb刷新一次缓存
         .setFlushInterval(TimeValue.timeValueSeconds(5)).setConcurrentRequests(1)// 每5s刷新一次
         .setBackoffPolicy(BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3))
         .build();

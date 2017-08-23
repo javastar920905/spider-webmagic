@@ -41,7 +41,7 @@ public class ESCity58PositionPipeLine extends ESOpsUtil implements Pipeline {
     }
 
     // 手动flash Flush any remaining requests
-    bulkProcessor.flush();
+    //bulkProcessor.flush();
 
   }
 }
