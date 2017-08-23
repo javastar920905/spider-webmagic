@@ -44,7 +44,7 @@ public class SpiderUtil {
     // setMaxConnTotal设置连接池最大连接数 setMaxConnPerRoute 设置单个路由最大连接数
     private static CloseableHttpClient httpClient = null;
     // 设置5s超时
-    private static int timeout = 5 * 1000;
+    private static int timeout = 3 * 1000;
     // 设置请求超时时间 .setProxy(new HttpHost("myotherproxy", 8080))
     private static RequestConfig config =
         RequestConfig.copy(RequestConfig.DEFAULT).setSocketTimeout(timeout)
@@ -55,7 +55,7 @@ public class SpiderUtil {
 
             public boolean retryRequest(IOException exception, int executionCount,
                 HttpContext context) {
-                if (executionCount >= 3) {
+                if (executionCount >= 5) {
                     HttpClientContext clientContext = HttpClientContext.adapt(context);
                     HttpRequest request = clientContext.getRequest();
                     System.out.println("重试请求超过限定次数,放弃重试: " + request.getRequestLine().getUri());

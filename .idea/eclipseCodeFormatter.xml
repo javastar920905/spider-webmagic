@@ -8,5 +8,14 @@
         <option name="selectedJavaProfile" value="GoogleStyle" />
       </ProjectSpecificProfile>
     </option>
+    <option name="selectedGlobalProfile">
+      <Settings>
+        <option name="formatter" value="ECLIPSE" />
+        <option name="id" value="1476243072457" />
+        <option name="name" value="default" />
+        <option name="pathToConfigFileJava" value="$PROJECT_DIR$/../rencaijia/recruitment/eclipse-java-google-style.xml" />
+        <option name="selectedJavaProfile" value="GoogleStyle" />
+      </Settings>
+    </option>
   </component>
 </project>

@@ -7,9 +7,11 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 
 /**
- * Created by chnejun on 2016/3/14.
+ * 加载Spring配置文件时，如果Spring配置文件中所定义的Bean类实现了ApplicationContextAware 接口，
+ * 那么在加载Spring配置文件时，会自动调用ApplicationContextAware 接口中的 public void
+ * setApplicationContext(ApplicationContext context) throws BeansException 前提必须在Spring配置文件中指定该类
+ * 当一个类实现了这个接口（ApplicationContextAware）之后，这个类就可以方便获得ApplicationContext中的所有bean。
  */
-
 @Component
 public class SpringContextUtil implements ApplicationContextAware {
 
@@ -21,7 +23,7 @@ public class SpringContextUtil implements ApplicationContextAware {
     SpringContextUtil.applicationContext = applicationContext;
   }
 
-  //打印容器中的bean
+  // 打印容器中的bean
   public static void printIocContextBeanNames() {
     if (applicationContext == null) {
       System.err.println("spring 容器加载失败");

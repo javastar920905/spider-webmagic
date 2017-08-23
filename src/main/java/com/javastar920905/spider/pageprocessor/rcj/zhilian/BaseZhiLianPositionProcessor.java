@@ -254,7 +254,7 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
     }
 
     // 发布日期处理,由于增量爬取今天的职位 所以应该只包含当天数据
-    private static String dealPublishDate(String rowDateStr) {
+    public static String dealPublishDate(String rowDateStr) {
       // 日期转换 刚刚 前天,昨天,今天
       // 2小时前 15天前 else
       // 07-21
@@ -268,7 +268,11 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
           Date date = DateUtil.getLastFewDays(new Date(), 2);
           return DateUtil.dateFormat(date, date_format);
         } else if (rowDateStr.contains("天前")) {
-          int range = Integer.valueOf(rowDateStr.substring(0, rowDateStr.indexOf("天前")));
+          String day = rowDateStr.substring(0, rowDateStr.indexOf("天前"));
+          if (day.trim().equals("")) {
+            return DateUtil.dateFormat(new Date(), date_format);
+          }
+          int range = Integer.valueOf(day);
           Date date = DateUtil.getLastFewDays(new Date(), range);
           return DateUtil.dateFormat(date, date_format);
         } else {
@@ -391,7 +395,7 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
       CollectionUtils.mergeArrayIntoCollection(industryData, allIndustryValueData);
       Increment.firstArea = allAreaValueData.get(0);
       LOGGER.info("*************************************************************");
-      LOGGER.info("热门城市数量: {} 普通城市数量:{} 冷门城市数量:{} 所有城市数量:{},行业数量:{},职能数量:{}",
+      LOGGER.info("智联招聘  热门城市数量: {} 普通城市数量:{} 冷门城市数量:{} 所有城市数量:{},行业数量:{},职能数量:{}",
           areaValueData_hot.length, areaValueData.length, areaValueData_loney.length,
           allAreaValueData.size(), industryData.length, funTypeData.length);
       LOGGER.info("热门行业数量: {} 普通行业数量:{} 所有行业数量:{}", industryData_hot.length, industryData.length,
