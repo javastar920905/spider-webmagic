@@ -28,11 +28,20 @@ public class Main {
     ConfigurableApplicationContext context =
         new AnnotationConfigApplicationContext(SpiderUtil.class, RedisConfig.class, ESConfig.class);
 
+    Spider city58Spider = Spider.create(new City58PositionListPageIncrementProcessor())
+        .addUrl(BaseCity58PositionProcessor.PositionList.Increment.fistPage)
+        .addPipeline(new ESCity58PositionPipeLine()).thread(20);
+    // 将当期spider对象注入 Listener中
+    List<SpiderListener> spiderListenerList = new ArrayList<>();
+    spiderListenerList.add(new UpdateProxyListener(city58Spider));
+    // city58Spider.setSpiderListeners(spiderListenerList);
+    SpiderUtil.SpiderProxy.city58Spider = city58Spider;
+
     // 往reids中填充要扒取的url数据
     try {
-      // new Thread(() -> BaseJob51PositionProcessor.Increment.generateIncreUrls()).start();
-      // new Thread(() ->
-      // BaseZhiLianPositionProcessor.PositionList.Increment.generateIncreUrls()).start();
+      new Thread(() -> BaseJob51PositionProcessor.Increment.generateIncreUrls()).start();
+     new Thread(() -> BaseZhiLianPositionProcessor.PositionList.Increment.generateIncreUrls())
+          .start();
       new Thread(BaseCity58PositionProcessor.PositionList.Increment::generateIncreUrls).start();
 
 
@@ -42,17 +51,10 @@ public class Main {
     }
 
     // 启动爬虫
-    // Job51PositionListPageIncrementProcessor.runIncrementSpider();
-    // ZhiLianPositionListPageIncrementProcessor.runIncrementSpider();
+    Job51PositionListPageIncrementProcessor.runIncrementSpider();
+    ZhiLianPositionListPageIncrementProcessor.runIncrementSpider();
 
 
-    Spider city58Spider = Spider.create(new City58PositionListPageIncrementProcessor())
-        .addUrl(BaseCity58PositionProcessor.PositionList.Increment.fistPage)
-        .addPipeline(new ESCity58PositionPipeLine()).thread(50);
-    // 将当期spider对象注入 Listener中
-    List<SpiderListener> spiderListenerList = new ArrayList<>();
-    spiderListenerList.add(new UpdateProxyListener(city58Spider));
-    // city58Spider.setSpiderListeners(spiderListenerList);
     city58Spider.start();
 
   }

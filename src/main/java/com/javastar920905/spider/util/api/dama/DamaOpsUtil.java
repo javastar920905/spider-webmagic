@@ -23,8 +23,7 @@ public class DamaOpsUtil {
    */
 
   public static String fourAlphanumbericalRecognize(String base64Data) {
-    ByteArrayInputStream is =
-        new ByteArrayInputStream(Base64.getDecoder().decode(base64Data.getBytes()));
+    ByteArrayInputStream is = new ByteArrayInputStream(decoder.decode(base64Data.getBytes()));
     byte[] data = new byte[is.available()];
     try {
       is.read(data);
@@ -38,8 +37,8 @@ public class DamaOpsUtil {
 
 
   /**
-   * 根据文件名称解析验证码
-   *
+   * 根据文件名称解析验证码 返回为空时,可能是没有钱呢
+   * 
    * @param bytes 验证码图片的字节数组
    * @return 解析成功后的验证码
    */

@@ -28,7 +28,17 @@ public class City58PositionListPageIncrementProcessor extends BaseCity58Position
 
   @Override
   public void process(Page page) {
-    spiderValidCode.deal58CityVerifyCode(page.getHtml());
+    if (spiderValidCode.queue.size() > 0) {
+      Thread thread = Thread.currentThread();
+      try {
+        SpiderProxy.city58Spider.wait();
+        LOGGER.info(" process线程{}进入休眠", thread.getName());
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+
+    spiderValidCode.deal58CityVerifyCode(page.getHtml(),page.getUrl().get());
     page.putField(RESULT, PositionList.dealPositionList(page.getHtml()));
 
     try {

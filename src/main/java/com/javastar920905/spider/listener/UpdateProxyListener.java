@@ -54,7 +54,7 @@ public class UpdateProxyListener implements SpiderListener {
 
   // 更新当前spider的代理
   public static void updateSpiderProxy(Spider spider) {
-    JSONObject jsonObject = SpiderUtil.getProxy();
+    JSONObject jsonObject = SpiderUtil.SpiderProxy.getProxy();
     if (jsonObject != null) {
       Proxy proxy = new Proxy(jsonObject.getString("ip"), jsonObject.getInteger("port"));
       if (ProxyUtils.validateProxy(proxy)) {

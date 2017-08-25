@@ -80,10 +80,6 @@ public class SpiderUtil {
     myRetryHandler = new HttpRequestRetryHandler() {
 
       public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
-        if (executionCount >= 3) {
-          // 更新代理
-          updateHttpClientProxy();
-        }
         if (executionCount >= 5) {
           HttpClientContext clientContext = HttpClientContext.adapt(context);
           HttpRequest request = clientContext.getRequest();
@@ -125,89 +121,6 @@ public class SpiderUtil {
 
     httpClient = HttpClients.custom().setMaxConnTotal(200).setMaxConnPerRoute(100)
         .setUserAgent(userAgent).setRetryHandler(myRetryHandler).build();
-
-  }
-
-  // 从讯代理获取代理ip资源
-  public static int retry = 0;
-
-  public static void retryGetProxy() {
-    retry++;
-    if (retry < 3) {
-      getProxy();
-    } else {
-      retry = 0;// 跳过本次调用
-    }
-  }
-
-  public static JSONObject getProxy() {
-    CloseableHttpClient client = HttpClients.createDefault();
-    HttpGet get = new HttpGet(
-        "http://www.xdaili.cn/ipagent//newExclusive/getIp?spiderId=a281f7b266e049cfb65862c1203374b6&orderno=MF201782366170cIkYn&returnType=2&count=1&machineArea=");
-
-    JSONObject jsonProxyObject = null;
-    try {
-      CloseableHttpResponse response = client.execute(get);
-      if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-        JSONObject resultJson = JSONObject.parseObject(response.getEntity().getContent(), null);
-        if ("0".equals(resultJson.get("ERRORCODE"))) {
-          JSONArray array = resultJson.getJSONArray("RESULT");
-          if (array != null && array.size() > 0) {
-            jsonProxyObject = (JSONObject) array.get(0);
-            System.out.println("====================>获取到的代理ip :" + array.toJSONString());
-          } else {
-            retryGetProxy();
-          }
-        } else {
-          System.err.println("获取代理ip失败 :" + resultJson.toJSONString());
-          JSONObject freeProxy[] = new JSONObject[3];
-          JSONObject jsonObject = new JSONObject();
-          jsonObject.put("ip", "27.153.128.91");
-          jsonObject.put("port", "30213");
-          freeProxy[0] = jsonObject;
-          JSONObject jsonObject1 = new JSONObject();
-          jsonObject1.put("ip", "114.229.35.218");
-          jsonObject1.put("port", "30069");
-          freeProxy[1] = jsonObject;
-          JSONObject jsonObject2 = new JSONObject();
-          jsonObject2.put("ip", "125.112.205.249");
-          jsonObject2.put("port", "25033");
-          freeProxy[2] = jsonObject;
-          Random random = new Random();
-          jsonProxyObject = freeProxy[random.nextInt(3)];
-        }
-      }
-      response.close();
-      get.releaseConnection();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-
-
-    if (jsonProxyObject != null) {
-      Proxy proxy = new Proxy(jsonProxyObject.getString("ip"), jsonProxyObject.getInteger("port"));
-      if (ProxyUtils.validateProxy(proxy) == false) {
-        retryGetProxy();
-      }
-    }
-
-    return jsonProxyObject;
-  }
-
-  // 更新httpClient对象的代理
-  public static void updateHttpClientProxy() {
-    JSONObject jsonObject = getProxy();
-    if (jsonObject != null) {
-      String ip = jsonObject.getString("ip");
-      Integer port = jsonObject.getInteger("port");
-
-      // 更新代理
-      HttpHost proxy = new HttpHost(ip, port);
-      DefaultProxyRoutePlanner routePlanner = new DefaultProxyRoutePlanner(proxy);
-      httpClient =
-          HttpClients.custom().setMaxConnTotal(200).setMaxConnPerRoute(100).setUserAgent(userAgent)
-              .setRetryHandler(myRetryHandler).setRoutePlanner(routePlanner).build();
-    }
 
   }
 
@@ -262,13 +175,14 @@ public class SpiderUtil {
       }
       response.close();
       get.releaseConnection();
+      LOGGER.info(" downloading page! {} {}", Thread.currentThread().getName(), aimUrl);
     } catch (IOException e) {
       System.err.println("抓取页面信息失败 ! " + aimUrl);
       e.printStackTrace();
     }
     if (aimUrl.contains(".58.com/")) {
-      if (spiderValidCode.deal58CityVerifyCode(html)) {
-        html = captureHtml(aimUrl, charset);
+      if (spiderValidCode.deal58CityVerifyCode(html, aimUrl) == false) {
+        // html = captureHtml(aimUrl, charset);
       }
     }
 
@@ -363,10 +277,97 @@ public class SpiderUtil {
         city58Spider.setDownloader(httpClientDownloader);
       }
     }
+
+
+    // 从讯代理获取代理ip资源
+    public static int retry = 0;
+
+    public static void retryGetProxy() {
+      retry++;
+      if (retry < 3) {
+        getProxy();
+      } else {
+        retry = 0;// 跳过本次调用
+      }
+    }
+
+    public static JSONObject getProxy() {
+      CloseableHttpClient client = HttpClients.createDefault();
+      HttpGet get = new HttpGet(
+          "http://www.xdaili.cn/ipagent//newExclusive/getIp?spiderId=a281f7b266e049cfb65862c1203374b6&orderno=MF201782366170cIkYn&returnType=2&count=1&machineArea=");
+
+      JSONObject jsonProxyObject = null;
+      try {
+        CloseableHttpResponse response = client.execute(get);
+        if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+          JSONObject resultJson = JSONObject.parseObject(response.getEntity().getContent(), null);
+          if ("0".equals(resultJson.get("ERRORCODE"))) {
+            JSONArray array = resultJson.getJSONArray("RESULT");
+            if (array != null && array.size() > 0) {
+              jsonProxyObject = (JSONObject) array.get(0);
+              System.out.println("====================>获取到的代理ip :" + array.toJSONString());
+            } else {
+              retryGetProxy();
+            }
+          } else {
+            System.err.println("获取代理ip失败 :" + resultJson.toJSONString());
+            JSONObject freeProxy[] = new JSONObject[3];
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("ip", "27.153.128.91");
+            jsonObject.put("port", "30213");
+            freeProxy[0] = jsonObject;
+            JSONObject jsonObject1 = new JSONObject();
+            jsonObject1.put("ip", "114.229.35.218");
+            jsonObject1.put("port", "30069");
+            freeProxy[1] = jsonObject;
+            JSONObject jsonObject2 = new JSONObject();
+            jsonObject2.put("ip", "125.112.205.249");
+            jsonObject2.put("port", "25033");
+            freeProxy[2] = jsonObject;
+            Random random = new Random();
+            jsonProxyObject = freeProxy[random.nextInt(3)];
+          }
+        }
+        response.close();
+        get.releaseConnection();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+
+
+      if (jsonProxyObject != null) {
+        Proxy proxy =
+            new Proxy(jsonProxyObject.getString("ip"), jsonProxyObject.getInteger("port"));
+        if (ProxyUtils.validateProxy(proxy) == false) {
+          retryGetProxy();
+        }
+      }
+
+      return jsonProxyObject;
+    }
+
+    // 更新httpClient对象的代理
+    public static void updateHttpClientProxy() {
+      JSONObject jsonObject = getProxy();
+      if (jsonObject != null) {
+        String ip = jsonObject.getString("ip");
+        Integer port = jsonObject.getInteger("port");
+
+        // 更新代理
+        HttpHost proxy = new HttpHost(ip, port);
+        DefaultProxyRoutePlanner routePlanner = new DefaultProxyRoutePlanner(proxy);
+        httpClient = HttpClients.custom().setMaxConnTotal(200).setMaxConnPerRoute(100)
+            .setUserAgent(userAgent).setRetryHandler(myRetryHandler).setRoutePlanner(routePlanner)
+            .build();
+      }
+
+    }
   }
 
   // 验证码解析类
   public static class spiderValidCode {
+
+    public static Queue<Thread> queue = new LinkedList();
 
     /**
      * 处理验证58同城验证码
@@ -375,48 +376,70 @@ public class SpiderUtil {
      * @param
      * @return
      */
-    public static boolean deal58CityVerifyCode(Html html) {
+    public static boolean deal58CityVerifyCode(Html html, String aimUrl) {
+      if (aimUrl == null) {
+        aimUrl = "";
+      }
+      boolean isverifyCodeSuccesed = false;
       String title = "";
       if (html != null) {
         title = html.css("title").xpath("title/text()").get();
       }
       if (title.equals("请输入验证码")) {
-        System.out.println("++++++++++++++++++ OMG! 58同城,出现验证码了*_* ");
-        String uuid = html.css("#uuid").$("input", "value").get();
+        synchronized (SpiderProxy.city58Spider) {
+          Thread thread = Thread.currentThread();
+          LOGGER.info("线程 {} 遇到了58同城 验证码,url  ", thread.getName());
+          if (queue.size() < 1) {
+            queue.offer(thread);// 队列只允许一个线程对象进入
+            LOGGER.info("线程 {} 进入了队列,队列中元素数量:{} ", thread.getName(), queue.size());
+          } else {
+            try {
+              SpiderProxy.city58Spider.wait();
+              LOGGER.info(" 线程{}进入休眠", thread.getName());
+            } catch (InterruptedException e) {
+              e.printStackTrace();
+            }
+          }
+          String uuid = html.css("#uuid").$("input", "value").get();
+          String ip = html.css("#ip").$("input", "value").get();
 
-        // 1 下载验证码
-        String validCodeUrl = html.css("#verify_img").$("img", "src").get();
-        String uri = validCodeUrl.substring(7);
-        validCodeUrl = "http://callback.58.com/firewall/code/" + uri;
-        // uuid + ".png"
-        byte[] imgByteData =
-            ImageSpider.downLoadFromUrl(validCodeUrl, "verify58Code.png");
-        // 2 提交打码兔接口,获取验证码识别结果
-        String verify_code = DamaOpsUtil.getValidateCode(imgByteData,42);
-        // 3 提交验证码到58
-        String url = html.css("#url").$("input", "value").get();
-        String namespace = html.css("#namespace").$("input", "value").get();
-        String verify58Url = "http://callback.58.com/firewall/valid/455480577.do?namespace="
-            + namespace + "&url=" + url;
+          // 1 下载验证码,覆盖之前的服务端验证码
+          String validCodeUrl = "http://callback.58.com/firewall/code/" + ip + "/" + uuid + ".do";
+          byte[] imgByteData = ImageSpider.downLoadFromUrl(validCodeUrl, "verify58Code.png");
+          // 2 提交打码兔接口,获取验证码识别结果
+          String verify_code = DamaOpsUtil.getValidateCode(imgByteData, 42);
+          if (verify_code == null) {
+            System.out.println("获取验证码为空!");
+          } else {
+            // 3 提交验证码到58
+            String url = html.css("#url").$("input", "value").get();
+            String namespace = html.css("#namespace").$("input", "value").get();
+            String verify58Url = "http://callback.58.com/firewall/valid/" + ip + ".do?namespace="
+                + namespace + "&url=" + url;
 
-        List<NameValuePair> formparams = new ArrayList<>();
-        formparams.add(new BasicNameValuePair("uuid", uuid));
-        formparams.add(new BasicNameValuePair("namespace", namespace));
-        formparams.add(new BasicNameValuePair("url", url));
-        formparams.add(new BasicNameValuePair("verify_code", verify_code));
-        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formparams, Consts.UTF_8);
-        String result = doPostRequest(verify58Url, entity);
+            List<NameValuePair> formparams = new ArrayList<>();
+            formparams.add(new BasicNameValuePair("uuid", uuid));
+            formparams.add(new BasicNameValuePair("namespace", namespace));
+            formparams.add(new BasicNameValuePair("url", url));
+            formparams.add(new BasicNameValuePair("verify_code", verify_code));
+            UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formparams, Consts.UTF_8);
+            String result = doPostRequest(verify58Url, entity);
 
-        // 4 获取58验证码验证结果
-        JSONObject parsedJson = JSONObject.parseObject(result);
-        if (parsedJson.getIntValue("code") == 0) {
-          LOGGER.info("++++++++++++++++++  验证结果: {}", parsedJson.getString("msg"));
-        } else {
-          System.err.println("验证码验证失败!  " + parsedJson.getString("msg"));
-          return true;
+            // 4 获取58验证码验证结果
+            JSONObject parsedJson = JSONObject.parseObject(result);
+            if (parsedJson.getIntValue("code") == 0) {
+              isverifyCodeSuccesed = true;
+              LOGGER.info("++++++++++++++++++  验证结果: {}", parsedJson.getString("msg"));
+            } else {
+              System.err.println("验证码验证失败!  " + parsedJson.getString("msg"));
+            }
+          }
+          queue.poll();// 出队列
+          SpiderProxy.city58Spider.notifyAll();// 唤醒所有该对象上等待的线程
+          LOGGER.info("线程 {} 离开了队列,队列中元素数量:{} ", thread.getName(), queue.size());
         }
       }
-      return false;
+      return isverifyCodeSuccesed;
     }
   }
 
