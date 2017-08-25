@@ -31,6 +31,7 @@ import static com.javastar920905.spider.util.SpiderConstantKey.Company.COMPANY_A
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.LOGO;
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.NAME;
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.PROFILE;
+import static com.javastar920905.spider.util.SpiderConstantKey.Company.WEBSITE;
 import static com.javastar920905.spider.util.SpiderConstantKey.ID;
 import static com.javastar920905.spider.util.SpiderConstantKey.POSITION_JSON;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.CITY;
@@ -87,13 +88,10 @@ public class BaseCity58PositionProcessor extends SpiderUtil {
      * 获取职位增量url
      */
     public static class Increment {
-      public static String firstArea = "bj";
-      public static String firstIndustry = "244";// 计算机软件行业
-      public static String firstfunc = "4010200";// 第一个工作职能
-      public static String timeNumber = "1";// 24小时内
+      public static String firstArea = "sz";
+      public static String timeNumber = generateDate();// 24小时内
       // 从xx地区+计算机软件行业 开始扒取 指定时间内新增url 根据发布时间排序
-      public static String pageUrl = "http://sou.zhaopin.com/jobs/searchresult.ashx?bj=" + firstfunc
-          + "&in=" + firstIndustry + "&jl=" + firstArea + "&isadv=0&isfilter=1&p=1&pd=1";
+      public static String pageUrl = "http://" + firstArea + ".58.com/job/?postdate=" + timeNumber;
       public static final String fistPage = pageUrl;
 
       // 冷门城市搜索条件
@@ -103,15 +101,19 @@ public class BaseCity58PositionProcessor extends SpiderUtil {
       // 热门城市搜索条件 地区+职能+行业+日期(注意页码为1时要省略pn1 否则报错)
       public static String hotCityUrl = "http://{0}.58.com/{1}/pve_5363_{2}/?postdate={3}";
 
+      public static String generateDate() {
+        Date today = new Date();
+        String start = DateUtil.dateFormat(new Date(), "yyyyMMdd");
+        String end = DateUtil.dateFormat(DateUtil.getLastFewDays(today, -1), "yyyyMMdd");
+        return start + "_" + end;
+      }
+
       /**
        * 生成指定时间段内的增量url (省份+行业)排列組合 *pageSize 并保存到(消息队列或者redis)
        */
       public static void generateIncreUrls() {
         // 生成日期
-        Date today = new Date();
-        String start = DateUtil.dateFormat(new Date(), "yyyyMMdd");
-        String end = DateUtil.dateFormat(DateUtil.getLastFewDays(today, -1), "yyyyMMdd");
-        String postdate = start + "_" + end;
+        String postdate = generateDate();
 
         int areaIndex = 0;
         int cityDatalen = allAreaValueData.size();
@@ -239,22 +241,35 @@ public class BaseCity58PositionProcessor extends SpiderUtil {
       Selectable companyDom = html.css(".comp_baseInfo_title .baseInfo_link a");
       String companyName = companyDom.xpath("a/text()").get(); // 公司名
       String companyLink = companyDom.links().get();
-      String workExp = html.xpath("/html/body/div[3]/div[3]/div[1]/div[4]/span[3]/text()").get(),
-          degree = html.xpath("/html/body/div[3]/div[3]/div[1]/div[4]/span[2]/text()").get(),
-          publishDate =
-              html.xpath("/html/body/div[3]/div[3]/div[1]/div[1]/span[1]/span/text()").get();
+      List<String> positionCondition =
+          html.css(".pos_info .pos_base_condition span").xpath("span/text()").all();
+      String num = "", workExp = "", degree = "", publishDate =
+          html.xpath("/html/body/div[3]/div[3]/div[1]/div[1]/span[1]/span/text()").get();
+      for (String item : positionCondition) {
+        if (item.contains("人")) {
+          num = item;
+        } else if (item.contains("经验") || item.contains("年")) {
+          workExp = item;
+        } else {
+          degree = item;
+        }
+      }
+
 
       publishDate = BaseZhiLianPositionProcessor.PositionList.dealPublishDate(publishDate);
-      Selectable positionDesc = html.xpath("/html/body/div[3]/div[3]/div[2]/div[1]/div[1]");
+      String positionDesc = html.css(".posDes").toString();
+      if (positionDesc != null) {
+        positionDesc = positionDesc.replaceAll("\\w+?=\".+?\"", "");
+      }
 
       try {
         if (positionId != null && !StringUtils.isEmpty(positionId)) {
           JSONObject json = new JSONObject();
           json.put(ID, positionId);
-          json.put(POSITION_NAME, html.xpath("/html/body/div[3]/div[3]/div[1]/span/text()").get());// 职位名
+          json.put(POSITION_NAME, html.css(".pos_name").xpath("span/text()").get());// 职位名
           json.put(POSITION_TITLE,
-              html.xpath("/html/body/div[3]/div[3]/div[1]/div[2]/span[1]/text()").get());// 工作职能
-          json.put(WELFARE, html.xpath("/html/body/div[3]/div[3]/div[1]/div[3]/span/text()").all());// 福利标签
+              html.css(".pos_base_info .pos_title").xpath("span/text()").get());// 工作职能
+          json.put(WELFARE, html.css(".pos_welfare span").xpath("span/text()").all());// 福利标签
           json.put(POSITION_LINK, positionLink);
           json.put(WORK_EXPERIENCE, workExp);// 工作年限
           json.put(DEGREE, degree);// 学历
@@ -263,9 +278,9 @@ public class BaseCity58PositionProcessor extends SpiderUtil {
           json.put(COMPANY_LINK, companyLink);
           String city = html.css(".bread .zp_crumb a").xpath("a/text()").get();
           json.put(CITY, city != null ? city.substring(0, city.indexOf("58同城")) : StringUtil.EMPTY);
-          json.put(WORKPLACE, html.xpath("/html/body/div[3]/div[3]/div[1]/div[5]/span[2]/text()"));
-          json.put(SALARY,
-              html.xpath("/html/body/div[3]/div[3]/div[1]/div[2]/span[2]/text()").get());
+          json.put(WORKPLACE,
+              html.css("div.pos-area > span:nth-child(2)").xpath("span/text()").get());
+          json.put(SALARY, html.css(".pos_base_info .pos_salary").xpath("span/text()").get());
           json.put(JOB_DESC, positionDesc);
           json.put(SOURCE, "city58");
           return json;
@@ -276,7 +291,11 @@ public class BaseCity58PositionProcessor extends SpiderUtil {
       return null;
     }
 
-
+    public static void main(String[] args) {
+      String url =
+          "http://jump.zhineng.58.com/jump?target=pZwY0jCfsL7OsWN3shPfUitYPHNOPH01rHmYn1DdPkDQnWNdn19LnjEQrH0kP1m1nj0YPH0dn1bdrjmKPjNdrHNLn1bvPjnQPH0KP9D1njmLP1nOP1Ndn1TOPEDQnjTKP1TKrHmYPTDYTHDdnjndP1cOnjc1PWmKnE7_pgPYUARhITDQTHDKXh66ULKGU-tznjDLnj9kP7qkmdqBmgP-xjD_Xh66ULKGU-tznjDvnj0QP7qzuyQ6IA-vuRqkmdqBmgP-xjDKsHDKTHTKnTDKuh7_0vNKnvcYmywWujEVPHF6riYYrHmYsyDYuycVPHnYnyFbPH6Bn1bdTHnYnHEvrjm3THcznjmkPj0kn1DQPHNznTDKrHmYPTDYTHT8njNQP1bLrHc3rH0Ln1mkn10KTEDKTy6YIZTlszq1XB3draOWUvYfmv78uLR6UBtKm1NfUh3QUZwmIgRDNR-pHZ7EnzqKu1YqTHcLsWn3sWcQsWDKnTDkTiYKmW9vPHbvrjndnHmYmhPbuT&adact=5";
+      dealCompanyJson(url);
+    }
 
     private static JSONObject dealCompanyJson(String url) {
       Html html = SpiderUtil.captureHtml(url, UTF8_CHARSET);
@@ -284,24 +303,28 @@ public class BaseCity58PositionProcessor extends SpiderUtil {
         return null;
       }
       // 公司信息获取
-      String companyId =
-          html.xpath("/html/body/div[3]/div[1]/div[1]/div[1]/h1/a").$("a", "href").get(); // id
+      String companyId = html.css(" div.wb-content > div.compHead > div.compT a.businessName")
+          .$("a", "href").get(); // id
       if (companyId != null && !StringUtils.isEmpty(companyId)) {
         JSONObject json = new JSONObject();
         companyId = companyId.substring(companyId.indexOf("58.com/") + 7);
         companyId = companyId.replaceAll("/", "");
         json.put(ID, companyId);
-        json.put(NAME, html.xpath("/html/body/div[3]/div[1]/div[1]/div[1]/h1/a/text()").get()); // 公司名
+        json.put(NAME, html.css(" div.wb-content > div.compHead > div.compT a.businessName")
+            .xpath("a/text()").get()); // 公司名
 
-        json.put(COMPANY_ADDRESS,
-            html.xpath("/html/body/div[3]/div[1]/div[2]/div[2]/ul/li[8]/div/var/text()").get());
+        json.put(COMPANY_ADDRESS, html.css(".compony").xpath("div/var/text()").get());
         json.put(SpiderConstantKey.Company.COMPANY_NATURE,
-            html.xpath("/html/body/div[3]/div[1]/div[2]/div[2]/ul/li[5]/text()").get()); // 公司类型
+            html.css("div.wb-main > div.wb-content .basicMsgList li:nth-child(5)")
+                .xpath("li/text()").get()); // 公司类型
         json.put(SpiderConstantKey.Company.COMPANY_SCALE,
-            html.xpath("/html/body/div[3]/div[1]/div[2]/div[2]/ul/li[7]/text()").get()); // 规模
+            html.css("div.wb-main > div.wb-content .basicMsgList li:nth-child(7)")
+                .xpath("li/text()").get()); // 规模
         json.put(SpiderConstantKey.Company.INDUSTRY,
-            html.xpath("/html/body/div[3]/div[1]/div[2]/div[2]/ul/li[9]/div/a/text()").get()); // 公司行业
-        json.put(PROFILE, html.xpath("/html/body/div[3]/div[1]/div[2]/div[2]/div[3]"));// 公司简介
+            html.css("div.wb-main > div.wb-content .tradeName a").xpath("a/text()").all()); // 公司行业
+        json.put(PROFILE, html.css(".compIntro").toString().replaceAll("\\w+?=\".+?\"", ""));// 公司简介
+        json.put(WEBSITE, html.css("div.wb-main > div.wb-content .basicMsgList li:nth-child(6) > a")
+            .xpath("a/text()"));
         json.put(LOGO, html.css(".head_info .head_info_img img").$("img", "src").get());
         json.put(SOURCE, "city58");
         return json;
@@ -400,12 +423,18 @@ public class BaseCity58PositionProcessor extends SpiderUtil {
     private static List<String> allAreaValueData = new ArrayList<>();
     private static List<String> allIndustryValueData = new ArrayList<>();
     static {
-      CollectionUtils.mergeArrayIntoCollection(areaValueData_hot, allAreaValueData);
-      CollectionUtils.mergeArrayIntoCollection(areaValueData_loney, allAreaValueData);
-      CollectionUtils.mergeArrayIntoCollection(areaValueData, allAreaValueData);
+      /*
+       * CollectionUtils.mergeArrayIntoCollection(areaValueData_hot, allAreaValueData);
+       * CollectionUtils.mergeArrayIntoCollection(areaValueData_loney, allAreaValueData);
+       * CollectionUtils.mergeArrayIntoCollection(areaValueData, allAreaValueData);
+       */
       CollectionUtils.mergeArrayIntoCollection(industryData_hot, allIndustryValueData);
       CollectionUtils.mergeArrayIntoCollection(industryData, allIndustryValueData);
-      Increment.firstArea = allAreaValueData.get(0);
+
+      // TODO 【k/1d】职位爬取范围 地区：深圳
+      allAreaValueData.add("sz");
+      Increment.firstArea = "sz"; // allAreaValueData.get(0);
+
       LOGGER.info("*************************************************************");
       LOGGER.info("58同城  热门城市数量: {} 普通城市数量:{} 冷门城市数量:{} 所有城市数量:{},行业数量:{},职能数量:{}",
           areaValueData_hot.length, areaValueData.length, areaValueData_loney.length,

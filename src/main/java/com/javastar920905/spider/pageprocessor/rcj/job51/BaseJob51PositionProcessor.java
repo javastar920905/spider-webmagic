@@ -580,17 +580,23 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
     return trimStr(tagPattern.matcher(str).replaceAll(""));
   }
 
-  private static List<String> provinceValueData_hot_list =
-      org.springframework.util.CollectionUtils.arrayToList(provinceValueData_hot);
+  private static List<String> provinceValueData_hot_list = new ArrayList<>();
   // 智联所有城市数据字典
   private static List<String> allProvinceValueData = new ArrayList<>();
   static {
     org.springframework.util.CollectionUtils.mergeArrayIntoCollection(provinceValueData_hot,
-        allProvinceValueData);
-    org.springframework.util.CollectionUtils.mergeArrayIntoCollection(provinceValueData,
-        allProvinceValueData);
-    Increment.firstArea = allProvinceValueData.get(0);
-    BaseJob51PositionProcessor.firstArea = allProvinceValueData.get(0);
+        provinceValueData_hot_list);
+    /*
+     * org.springframework.util.CollectionUtils.mergeArrayIntoCollection(provinceValueData_hot,
+     * allProvinceValueData);
+     * org.springframework.util.CollectionUtils.mergeArrayIntoCollection(provinceValueData,
+     * allProvinceValueData);
+     */
+    // TODO 【k/1d】职位爬取范围 地区：深圳
+    allProvinceValueData.add("040000");
+    provinceValueData_hot_list.add("040000");
+    Increment.firstArea ="040000"; //allProvinceValueData.get(0);
+
     LOGGER.info("*************************************************************");
     LOGGER.info("51job 数据字典统计  热门省份城市数量: {} 普通城市数量:{} 所有城市数量:{},行业数量:{},职能数量:{}",
         provinceValueData_hot.length, provinceValueData.length, allProvinceValueData.size(),

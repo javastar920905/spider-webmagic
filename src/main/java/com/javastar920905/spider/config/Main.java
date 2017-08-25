@@ -47,15 +47,12 @@ public class Main {
 
 
     Spider city58Spider = Spider.create(new City58PositionListPageIncrementProcessor())
-        // .addUrl(BaseCity58PositionProcessor.PositionList.Increment.fistPage)
-        .addUrl(
-            "http://bj.58.com/tech/?postdate=20170822_20170823&PGTID=0d303655-0000-16a7-43e6-eedd91f3c35c&ClickID=4")
+        .addUrl(BaseCity58PositionProcessor.PositionList.Increment.fistPage)
         .addPipeline(new ESCity58PositionPipeLine()).thread(50);
-
     // 将当期spider对象注入 Listener中
     List<SpiderListener> spiderListenerList = new ArrayList<>();
     spiderListenerList.add(new UpdateProxyListener(city58Spider));
-    city58Spider.setSpiderListeners(spiderListenerList);
+    // city58Spider.setSpiderListeners(spiderListenerList);
     city58Spider.start();
 
   }

@@ -3,33 +3,49 @@ package com.javastar920905.spider.util;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 import java.util.Random;
 
 import javax.net.ssl.SSLException;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.javastar920905.spider.util.api.dama.DamaOpsUtil;
+import org.apache.http.Consts;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
 import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
+import us.codecraft.webmagic.Spider;
+import us.codecraft.webmagic.downloader.HttpClientDownloader;
 import us.codecraft.webmagic.proxy.Proxy;
+import us.codecraft.webmagic.proxy.SimpleProxyProvider;
 import us.codecraft.webmagic.selector.Html;
 import us.codecraft.webmagic.utils.ProxyUtils;
 import us.codecraft.webmagic.utils.UrlUtils;
@@ -38,6 +54,7 @@ import us.codecraft.webmagic.utils.UrlUtils;
  * Created by ouzhx on 2017/7/6.
  */
 public class SpiderUtil {
+  private static Logger LOGGER = LoggerFactory.getLogger(SpiderUtil.class);
 
   public static String userAgent =
       "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36";
@@ -249,10 +266,179 @@ public class SpiderUtil {
       System.err.println("抓取页面信息失败 ! " + aimUrl);
       e.printStackTrace();
     }
+    if (aimUrl.contains(".58.com/")) {
+      if (spiderValidCode.deal58CityVerifyCode(html)) {
+        html = captureHtml(aimUrl, charset);
+      }
+    }
 
     return html;
   }
 
 
+  public static class SpiderProxy {
+    // public static String ip = "222.95.21.191";
+    // public static int port = 808;
+    // 更新webmagic对象的代理
+    public static Spider city58Spider;
+    private static Queue<HttpHost> queue = new LinkedList<>();
+
+    /**
+     * 扒取讯代理的免费代理ip列表
+     *
+     * @return
+     */
+    public static void getProxyList() {
+      CloseableHttpClient client = HttpClients.createDefault();
+      String aimUrl = "http://www.xdaili.cn/ipagent//freeip/getFreeIps?page=1&rows=10";
+      HttpGet get = new HttpGet(aimUrl);
+
+      try {
+        CloseableHttpResponse response = client.execute(get);
+        if (response.getStatusLine().getStatusCode() == org.apache.http.HttpStatus.SC_OK) {
+          JSONObject resultJson = JSONObject.parseObject(response.getEntity().getContent(), null);
+          if ("0".equals(resultJson.get("ERRORCODE"))) {
+            JSONArray array = resultJson.getJSONObject("RESULT").getJSONArray("rows");
+            for (Object object : array) {
+              JSONObject json = JSONUtil.parseObjectToJSONObject(object, null);
+              HttpHost httpHost = new HttpHost(json.getString("ip"), json.getIntValue("port"));
+              queue.offer(httpHost);
+            }
+          }
+        }
+        response.close();
+        get.releaseConnection();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+
+
+    /**
+     * 验证58同城是否出现验证码
+     *
+     * @param html 要验证的页面
+     * @return
+     */
+    public static boolean isValidCodeShow(Html html) {
+      String title = "";
+      if (html != null) {
+        title = html.css("title").xpath("title/text()").get();
+      }
+      if (html == null || title.equals("请输入验证码")) {
+        if (queue.size() < 1) {
+          synchronized (queue) {
+            if (queue.size() < 1) {
+              getProxyList();
+            }
+          }
+        }
+        HttpHost host = queue.poll();
+        LOGGER.info("++++++++++++++++++ OMG! 58同城,出现验证码了*_*,换个ip试试: " + host.toHostString());
+        if (host != null) {
+          updateHttpClientProxy(host);
+          if (city58Spider != null) {
+            updateSpiderProxy(host);
+          }
+        }
+        return true;
+      }
+      return false;
+    }
+
+
+    // 更新httpClient对象的代理
+    public static void updateHttpClientProxy(HttpHost proxy) {
+      DefaultProxyRoutePlanner routePlanner = new DefaultProxyRoutePlanner(proxy);
+      httpClient =
+          HttpClients.custom().setMaxConnTotal(200).setMaxConnPerRoute(100).setUserAgent(userAgent)
+              .setRetryHandler(myRetryHandler).setRoutePlanner(routePlanner).build();
+    }
+
+    public static void updateSpiderProxy(HttpHost host) {
+      Proxy proxy1 = new Proxy(host.getHostName(), host.getPort());
+      if (ProxyUtils.validateProxy(proxy1)) {
+        HttpClientDownloader httpClientDownloader = new HttpClientDownloader();
+        httpClientDownloader.setProxyProvider(SimpleProxyProvider.from(proxy1));
+        city58Spider.setDownloader(httpClientDownloader);
+      }
+    }
+  }
+
+  // 验证码解析类
+  public static class spiderValidCode {
+
+    /**
+     * 处理验证58同城验证码
+     *
+     * @param html 要验证的页面
+     * @param
+     * @return
+     */
+    public static boolean deal58CityVerifyCode(Html html) {
+      String title = "";
+      if (html != null) {
+        title = html.css("title").xpath("title/text()").get();
+      }
+      if (title.equals("请输入验证码")) {
+        System.out.println("++++++++++++++++++ OMG! 58同城,出现验证码了*_* ");
+        String uuid = html.css("#uuid").$("input", "value").get();
+
+        // 1 下载验证码
+        String validCodeUrl = html.css("#verify_img").$("img", "src").get();
+        String uri = validCodeUrl.substring(7);
+        validCodeUrl = "http://callback.58.com/firewall/code/" + uri;
+        // uuid + ".png"
+        byte[] imgByteData =
+            ImageSpider.downLoadFromUrl(validCodeUrl, "verify58Code.png");
+        // 2 提交打码兔接口,获取验证码识别结果
+        String verify_code = DamaOpsUtil.getValidateCode(imgByteData,42);
+        // 3 提交验证码到58
+        String url = html.css("#url").$("input", "value").get();
+        String namespace = html.css("#namespace").$("input", "value").get();
+        String verify58Url = "http://callback.58.com/firewall/valid/455480577.do?namespace="
+            + namespace + "&url=" + url;
+
+        List<NameValuePair> formparams = new ArrayList<>();
+        formparams.add(new BasicNameValuePair("uuid", uuid));
+        formparams.add(new BasicNameValuePair("namespace", namespace));
+        formparams.add(new BasicNameValuePair("url", url));
+        formparams.add(new BasicNameValuePair("verify_code", verify_code));
+        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formparams, Consts.UTF_8);
+        String result = doPostRequest(verify58Url, entity);
+
+        // 4 获取58验证码验证结果
+        JSONObject parsedJson = JSONObject.parseObject(result);
+        if (parsedJson.getIntValue("code") == 0) {
+          LOGGER.info("++++++++++++++++++  验证结果: {}", parsedJson.getString("msg"));
+        } else {
+          System.err.println("验证码验证失败!  " + parsedJson.getString("msg"));
+          return true;
+        }
+      }
+      return false;
+    }
+  }
+
+  public static String doPostRequest(String aimUrl, HttpEntity entity) {
+    CloseableHttpClient client = HttpClients.createDefault();
+    HttpPost post = new HttpPost(aimUrl);
+    if (entity != null) {
+      post.setEntity(entity);
+    }
+
+    try {
+      CloseableHttpResponse response = client.execute(post);
+      if (response.getStatusLine().getStatusCode() == org.apache.http.HttpStatus.SC_OK) {
+        String webPageString = EntityUtils.toString(response.getEntity(), "utf-8");
+        return webPageString;
+      }
+      response.close();
+      post.releaseConnection();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return null;
+  }
 
 }

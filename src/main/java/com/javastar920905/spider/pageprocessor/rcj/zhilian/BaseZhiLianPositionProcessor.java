@@ -388,12 +388,17 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
     private static List<String> allAreaValueData = new ArrayList<>();
     private static List<String> allIndustryValueData = new ArrayList<>();
     static {
-      CollectionUtils.mergeArrayIntoCollection(areaValueData_hot, allAreaValueData);
+      /* CollectionUtils.mergeArrayIntoCollection(areaValueData_hot, allAreaValueData);
       CollectionUtils.mergeArrayIntoCollection(areaValueData_loney, allAreaValueData);
-      CollectionUtils.mergeArrayIntoCollection(areaValueData, allAreaValueData);
+      CollectionUtils.mergeArrayIntoCollection(areaValueData, allAreaValueData);*/
+
+      // TODO 【k/1d】职位爬取范围 地区：深圳
+      allAreaValueData.add("深圳");
+      Increment.firstArea = "深圳"; //allAreaValueData.get(0);
+
+
       CollectionUtils.mergeArrayIntoCollection(industryData_hot, allIndustryValueData);
       CollectionUtils.mergeArrayIntoCollection(industryData, allIndustryValueData);
-      Increment.firstArea = allAreaValueData.get(0);
       LOGGER.info("*************************************************************");
       LOGGER.info("智联招聘  热门城市数量: {} 普通城市数量:{} 冷门城市数量:{} 所有城市数量:{},行业数量:{},职能数量:{}",
           areaValueData_hot.length, areaValueData.length, areaValueData_loney.length,
