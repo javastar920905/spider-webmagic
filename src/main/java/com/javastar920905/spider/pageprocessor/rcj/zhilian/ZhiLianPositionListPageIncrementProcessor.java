@@ -4,6 +4,7 @@ package com.javastar920905.spider.pageprocessor.rcj.zhilian;
 
 import static com.javastar920905.spider.util.StringUtil.RESULT;
 
+import com.javastar920905.spider.pipeline.city58.ESCity58PositionPipeLine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.RedisConnection;
@@ -40,7 +41,7 @@ public class ZhiLianPositionListPageIncrementProcessor extends BaseZhiLianPositi
   private static Spider newInstance() {
     return Spider.create(new ZhiLianPositionListPageIncrementProcessor())
         .addRequest(getRequest(BaseZhiLianPositionProcessor.PositionList.Increment.fistPage))
-        .addPipeline(new RedisZhilianPositionListPipeLine()).thread(50);
+        .addPipeline(new ESCity58PositionPipeLine()).thread(50);
   }
 
   // 提供接口用于启动当前spider

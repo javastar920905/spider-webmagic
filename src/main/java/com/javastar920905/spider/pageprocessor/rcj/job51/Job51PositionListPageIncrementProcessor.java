@@ -5,6 +5,7 @@ import static com.javastar920905.spider.util.StringUtil.RESULT;
 import java.util.List;
 import java.util.Vector;
 
+import com.javastar920905.spider.pipeline.city58.ESCity58PositionPipeLine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -34,7 +35,7 @@ public class Job51PositionListPageIncrementProcessor extends BaseJob51PositionPr
   // 创建一个新的spider对象
   private static Spider newInstance() {
     return Spider.create(new Job51PositionListPageIncrementProcessor())
-        .addRequest(getRequest(fistPage)).addPipeline(new RedisJob51PositionListPipeLine())
+        .addRequest(getRequest(fistPage)).addPipeline(new ESCity58PositionPipeLine())
         .thread(40);
   }
 

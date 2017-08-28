@@ -324,7 +324,7 @@ public class BaseCity58PositionProcessor extends SpiderUtil {
             html.css("div.wb-main > div.wb-content .tradeName a").xpath("a/text()").all()); // 公司行业
         json.put(PROFILE, html.css(".compIntro").toString().replaceAll("\\w+?=\".+?\"", ""));// 公司简介
         json.put(WEBSITE, html.css("div.wb-main > div.wb-content .basicMsgList li:nth-child(6) > a")
-            .xpath("a/text()"));
+            .xpath("a/text()").get());
         json.put(LOGO, html.css(".head_info .head_info_img img").$("img", "src").get());
         json.put(SOURCE, "city58");
         return json;

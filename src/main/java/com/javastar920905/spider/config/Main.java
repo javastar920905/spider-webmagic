@@ -40,9 +40,9 @@ public class Main {
     // 往reids中填充要扒取的url数据
     try {
       new Thread(() -> BaseJob51PositionProcessor.Increment.generateIncreUrls()).start();
-     new Thread(() -> BaseZhiLianPositionProcessor.PositionList.Increment.generateIncreUrls())
+      new Thread(() -> BaseZhiLianPositionProcessor.PositionList.Increment.generateIncreUrls())
           .start();
-      new Thread(BaseCity58PositionProcessor.PositionList.Increment::generateIncreUrls).start();
+      // new Thread(BaseCity58PositionProcessor.PositionList.Increment::generateIncreUrls).start();
 
 
       Thread.sleep(5 * 1000);

@@ -1,6 +1,9 @@
 package com.javastar920905.spider.pageprocessor.rcj.zhilian;
 
 import static com.javastar920905.spider.util.SpiderConstantKey.COMPANY_JSON;
+import static com.javastar920905.spider.util.SpiderConstantKey.Company.COMPANY_NATURE;
+import static com.javastar920905.spider.util.SpiderConstantKey.Company.COMPANY_SCALE;
+import static com.javastar920905.spider.util.SpiderConstantKey.Company.WEBSITE;
 import static com.javastar920905.spider.util.SpiderConstantKey.ID;
 import static com.javastar920905.spider.util.SpiderConstantKey.POSITION_JSON;
 import static com.javastar920905.spider.util.SpiderConstantKey.SOURCE;
@@ -171,39 +174,36 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
     // </editor-fold>
 
     public static JSONArray dealPositionList(Html html) {
-      // 职位列表css定位
-      String parentCss = "#newlist_list_content_table";
-      // 职位信息获取 (这里有多少个字段就相当于有多少个数组)
       List<String> positionLinkList =
-          html.css(parentCss + " td.zwmc div a:nth-child(1)").links().all();
-      List<String> companyLinkList = html.css(parentCss + " td.gsmc a:nth-child(1)").links().all();
-      JSONArray positionJsonArray = new JSONArray();
-      int i = 0;
-      if (positionLinkList != null) {
-        int listSize = positionLinkList.size();
-        for (; i < listSize; i++) {
-          JSONObject json = new JSONObject();
-          String positinLink = positionLinkList.get(i);
+          html.css("#newlist_list_content_table td.zwmc div a:nth-child(1)").links().all();
+      List<String> companyLinkList =
+          html.css("#newlist_list_content_table td.gsmc a:nth-child(1)").links().all();
+      JSONArray resultJsonArray = new JSONArray();// 抓取结果
+      if (org.apache.commons.collections.CollectionUtils.isNotEmpty(positionLinkList)
+          && org.apache.commons.collections.CollectionUtils.isNotEmpty(companyLinkList)) {
+        for (int i = 0; i < positionLinkList.size(); i++) {
+          String positionLink = positionLinkList.get(i);
           String companyLink = companyLinkList.get(i);
-          json.put("positionLink", positinLink);
-          json.put("companyLink", companyLink);
-          if (positinLink.startsWith("http://jobs.zhaopin.com")) {
-            // 特殊职位处理
-            // https://xiaoyuan.zhaopin.com/job/CC000956761J90000110000?ssidkey=y&ss=201&ff=03&sg=28c70134fdee4c78af997854f955252a&so=33
-            json.put(POSITION_JSON, dealPositionInfo(positinLink));
-          }
-          // 抓取公司详情
-          if (StringUtil.isNotEmpty(companyLink)
+          // 排除特殊职位 和 公司
+          if (org.apache.commons.lang3.StringUtils.isNotEmpty(positionLink)
+              && org.apache.commons.lang3.StringUtils.isNotEmpty(companyLink)
+              && positionLink.startsWith("http://jobs.zhaopin.com")
               && companyLink.startsWith("http://company.zhaopin.com")) {
-            // 特殊公司处理 http://special.zhaopin.com/pagepublish/41124893/index.html
+            JSONObject json = new JSONObject();
+            json.put("positionLink", positionLink);
+            json.put("companyLink", companyLink);
+            json.put("source", "zhilian");// 数据来源
             json.put(COMPANY_JSON, dealCompanyJson(companyLink));
+            json.put(POSITION_JSON, dealPositionInfo(positionLink));
+
+            if (json.get(POSITION_JSON) == null || json.get(COMPANY_JSON) == null) {
+              continue;
+            }
+            resultJsonArray.add(json);
           }
-          json.put(SOURCE, "zhilian");// 数据来源
-          // 扒取职位信息
-          positionJsonArray.add(json);
         }
       }
-      return positionJsonArray;
+      return resultJsonArray;
     }
 
     private static JSONObject dealPositionInfo(String url) {
@@ -212,41 +212,42 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
         return null;
       }
       // 职位信息获取
-      String positionId = url.substring(url.lastIndexOf("/") + 1, url.lastIndexOf(".")); // id
-      String positionLink = url;
-      Selectable companyDom = html.xpath("/html/body/div[5]/div[1]/div[1]/h2/a");
-      String companyName = companyDom.xpath("a/text()").get(); // 公司名
-      String companyLink = companyDom.links().get();
-      String workExp = html.xpath("/html/body/div[6]/div[1]/ul/li[5]/strong/text()").get(),
-          degree = html.xpath("/html/body/div[6]/div[1]/ul/li[6]/strong/text()").get(),
-          publishDate = html.xpath("//*[@id=\"span4freshdate\"]/text()").get();
+      String workExp = html.xpath("/html/body/div[6]/div[1]/ul/li[5]/strong/text()").get();
+      String degree = html.xpath("/html/body/div[6]/div[1]/ul/li[6]/strong/text()").get();
+      String publishDate = dealPublishDate(html.xpath("//*[@id=\"span4freshdate\"]/text()").get());
+      String workplaceCity = html.xpath("/html/body/div[6]/div[1]/ul/li[2]/strong/html()").get();
+      if (StringUtil.isNotEmpty(workplaceCity)) {
+        workplaceCity.replaceAll("<.+?>", "");
+      }
 
-      publishDate = dealPublishDate(publishDate);
-      Selectable positionDesc = html.css(
+      Selectable jdSelectable = html.css(
           "div.terminalpage.clearfix > div.terminalpage-left > div.terminalpage-main.clearfix  div.tab-inner-cont");
-
+      String workplaceAddress = org.apache.commons.lang3.StringUtils
+          .trim(jdSelectable.css(" h2").xpath("h2/text()").get());
+      String jobDesc = jdSelectable.xpath("div[@class='tab-inner-cont']/html()").get();
+      if (StringUtil.isNotEmpty(jobDesc)) {
+        jobDesc = jobDesc.substring(0, jobDesc.indexOf("<b>工作地址：</b>")); // 清除属性
+        jobDesc.replaceAll("\\w+?=\".+?\"", "");
+      } else {
+        jobDesc = "";
+      }
       try {
-        if (positionId != null && !StringUtils.isEmpty(positionId)) {
-          JSONObject json = new JSONObject();
-          json.put(ID, positionId);
-          json.put(POSITION_NAME, html.xpath("/html/body/div[5]/div[1]/div[1]/h1/text()").get());// 职位名
-          json.put(POSITION_TITLE,
-              html.xpath("/html/body/div[6]/div[1]/ul/li[8]/strong/a/text()").get());// 工作职能
-          json.put(WELFARE, html.xpath("/html/body/div[5]/div[1]/div[1]/div[1]/span/text()").all());// 福利标签
-          json.put(POSITION_LINK, positionLink);
-          json.put(WORK_EXPERIENCE, workExp);// 工作年限
-          json.put(DEGREE, degree);// 学历
-          json.put(PUBLISHED_DATE, publishDate);
-          json.put(COMPANY_NAME, companyName);
-          json.put(COMPANY_LINK, companyLink);
-          json.put(CITY, html.xpath("/html/body/div[6]/div[1]/ul/li[2]/strong/a/text()").get());
-          json.put(WORKPLACE, positionDesc.css(" h2").xpath("h2/text()").get());
-          json.put(SALARY, html.xpath("/html/body/div[6]/div[1]/ul/li[1]/strong/text()").get());
-          json.put(JOB_DESC, positionDesc);
-          json.put(JOB_NATURE, html.xpath("/html/body/div[6]/div[1]/ul/li[4]/strong/text()"));
-          json.put(SOURCE, "zhilian");
-          return json;
-        }
+        JSONObject json = new JSONObject();
+        json.put(POSITION_TITLE,
+            html.xpath("/html/body/div[6]/div[1]/ul/li[8]/strong/a/text()").get());// 工作职能
+        json.put(WELFARE, html.xpath("/html/body/div[5]/div[1]/div[1]/div[1]/span/text()").all());// 福利标签
+        json.put(POSITION_LINK, url);
+        json.put(WORK_EXPERIENCE, workExp);// 工作年限
+        json.put(DEGREE, degree);// 学历
+        json.put(PUBLISHED_DATE, publishDate);
+        json.put(CITY, html.xpath("/html/body/div[6]/div[1]/ul/li[2]/strong/a/text()").get());
+        json.put(SALARY, html.xpath("/html/body/div[6]/div[1]/ul/li[1]/strong/text()").get());
+        json.put("workplace_city", workplaceCity);
+        json.put("workplace_address", workplaceAddress);
+        json.put(JOB_DESC, jobDesc);
+        json.put(JOB_NATURE, html.xpath("/html/body/div[6]/div[1]/ul/li[4]/strong/text()"));
+        json.put("source", "zhilian");
+        return json;
       } catch (Exception e) {
         LOGGER.error("获取页面失败 {}", url, e);
       }
@@ -289,30 +290,50 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
         return null;
       }
       // 公司信息获取
-      String companyId = url.substring(url.lastIndexOf("/") + 1, url.lastIndexOf(".")); // id
-      if (companyId != null && !StringUtils.isEmpty(companyId)) {
-        JSONObject json = new JSONObject();
-        json.put(ID, companyId);
-        json.put(NAME, html.xpath("/html/body/div[2]/div[1]/div[1]/h1/text()").get()); // 公司名
-
-        json.put(COMPANY_ADDRESS, html
-            .xpath("/html/body/div[2]/div[1]/div[1]/table/tbody/tr[4]/td[2]/span/text()").get());
-        json.put(SpiderConstantKey.Company.COMPANY_NATURE, html
-            .xpath("/html/body/div[2]/div[1]/div[1]/table/tbody/tr[1]/td[2]/span/text()").get()); // 公司类型
-        json.put(SpiderConstantKey.Company.COMPANY_SCALE, html
-            .xpath("/html/body/div[2]/div[1]/div[1]/table/tbody/tr[2]/td[2]/span/text()").get()); // 规模
-        json.put(SpiderConstantKey.Company.INDUSTRY, html
-            .xpath("/html/body/div[2]/div[1]/div[1]/table/tbody/tr[3]/td[2]/span/text()").get()); // 公司行业
-        json.put(PROFILE, html.css("div.main div.company-content"));// 公司简介
-        json.put(LOGO,
-            html.css("div.main div.company-content img.companyLogo").$("img", "src").get());
-        json.put(SOURCE, "zhilian");
-        return json;
+      JSONObject json = new JSONObject();
+      try {
+        json.put(NAME, org.apache.commons.lang3.StringUtils
+            .trim(html.xpath("//div[@class='mainLeft']//h1/text()").get())); // 公司名
+        List<String> dataPairList = html.xpath("//table[@class='comTinyDes']//span/html()").all();
+        for (int i = 0; i < dataPairList.size(); i++) {
+          String dataKey = dataPairList.get(i);
+          String dataValue = dataPairList.get(++i);
+          if (org.apache.commons.lang3.StringUtils.contains(dataKey, "公司性质")) {
+            json.put(COMPANY_NATURE, dataValue);
+          } else if (org.apache.commons.lang3.StringUtils.contains(dataKey, "公司规模")) {
+            json.put(COMPANY_SCALE, dataValue);
+          } else if (org.apache.commons.lang3.StringUtils.contains(dataKey, "公司网站")) {
+            json.put(WEBSITE, dataValue.replaceAll("<.+?>", ""));
+          } else if (org.apache.commons.lang3.StringUtils.contains(dataKey, "公司行业")) {
+            json.put("industry", dataValue.split(","));
+          } else if (org.apache.commons.lang3.StringUtils.contains(dataKey, "公司地址")) {
+            json.put(COMPANY_ADDRESS, dataValue);
+          }
+        }
+        String profile = html.xpath("//div[@class='company-content']/html()").get();
+        if (StringUtil.isNotEmpty(profile)) {
+          profile = profile.replaceAll("<img.*?>", "").replaceAll("\\w+?=\"(.+?)\"", "");
+        }
+        json.put(PROFILE, profile); // 公司简介
+        json.put(LOGO, html.xpath("//div[@class='company-content']/img/@src").get());
+        json.put(COMPANY_LINK, url);
+      } catch (Exception e) {
+        LOGGER.error("获取页面失败 {}", url, e);
       }
-      return null;
+      json.put("source", "zhilian");
+      return json;
     }
 
+    private static String trimStr(String str) {
+      char white = 160;
+      return StringUtils.trimWhitespace(
+          StringUtils.trimLeadingCharacter(StringUtils.trimTrailingCharacter(str, white), white));
+    }
 
+    // 清除所有标签
+    private static String trimTag(String str) {
+      return trimStr(str.replaceAll("<.+?>", ""));
+    }
 
     // <editor-fold desc="定义地区 行业 工作职能等数据字典">
     /* 智联招聘 热门行业编号 */
@@ -388,13 +409,15 @@ public class BaseZhiLianPositionProcessor extends SpiderUtil {
     private static List<String> allAreaValueData = new ArrayList<>();
     private static List<String> allIndustryValueData = new ArrayList<>();
     static {
-      /* CollectionUtils.mergeArrayIntoCollection(areaValueData_hot, allAreaValueData);
-      CollectionUtils.mergeArrayIntoCollection(areaValueData_loney, allAreaValueData);
-      CollectionUtils.mergeArrayIntoCollection(areaValueData, allAreaValueData);*/
+      /*
+       * CollectionUtils.mergeArrayIntoCollection(areaValueData_hot, allAreaValueData);
+       * CollectionUtils.mergeArrayIntoCollection(areaValueData_loney, allAreaValueData);
+       * CollectionUtils.mergeArrayIntoCollection(areaValueData, allAreaValueData);
+       */
 
       // TODO 【k/1d】职位爬取范围 地区：深圳
       allAreaValueData.add("深圳");
-      Increment.firstArea = "深圳"; //allAreaValueData.get(0);
+      Increment.firstArea = "深圳"; // allAreaValueData.get(0);
 
 
       CollectionUtils.mergeArrayIntoCollection(industryData_hot, allIndustryValueData);

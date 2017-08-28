@@ -2,7 +2,6 @@ package com.javastar920905.spider.pageprocessor.rcj.job51;
 
 
 import static com.javastar920905.spider.util.SpiderConstantKey.COMPANY_JSON;
-import static com.javastar920905.spider.util.SpiderConstantKey.ID;
 import static com.javastar920905.spider.util.SpiderConstantKey.POSITION_JSON;
 import static com.javastar920905.spider.util.SpiderConstantKey.SOURCE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.COMPANY_ADDRESS;
@@ -12,19 +11,15 @@ import static com.javastar920905.spider.util.SpiderConstantKey.Company.OFFICE_EN
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.PROFILE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Company.WEBSITE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.COMPANY_LINK;
-import static com.javastar920905.spider.util.SpiderConstantKey.Position.COMPANY_NAME;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.DEGREE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.JOB_DESC;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.LABEL_LIST;
-import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_LANGUAGE_REQUIREMENTS;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_LINK;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_MAJOR_REQUIREMENT;
-import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_NAME;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.POSITION_TITLE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.PUBLISHED_DATE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.SALARY;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.WELFARE;
-import static com.javastar920905.spider.util.SpiderConstantKey.Position.WORKPLACE;
 import static com.javastar920905.spider.util.SpiderConstantKey.Position.WORK_EXPERIENCE;
 
 import java.util.ArrayList;
@@ -33,6 +28,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -44,9 +40,9 @@ import com.alibaba.fastjson.JSONObject;
 import com.javastar920905.spider.util.RedisOpsUtil;
 import com.javastar920905.spider.util.SpiderConstantKey;
 import com.javastar920905.spider.util.SpiderUtil;
+import com.javastar920905.spider.util.StringUtil;
 
 import us.codecraft.webmagic.selector.Html;
-import us.codecraft.webmagic.selector.Selectable;
 
 /**
  * Created by ouzhx on 2017/7/6.
@@ -198,37 +194,24 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
   // </editor-fold>
 
 
-  public static JSONArray dealPositionList(Html html) {
-    // 职位列表css定位
-    String parentCss = "#resultList .el ";
-    // 职位信息获取 (这里有多少个字段就相当于有多少个数组)
-    List<String> positionLinkList = html.css(parentCss + ".t1 span a").links().all();
-    List<String> companyLinkList = html.css(parentCss + ".t2 a").links().all();
+  protected JSONArray dealPositionList(Html html) {
+    List<String> positionLinkList = html.css("#resultList .el .t1 span a").links().all();
+    List<String> companyLinkList = html.css("#resultList .el .t2 a").links().all();
 
-    /*
-     * if (positionLinkList.size() != companyLinkList.size()) {
-     * LOGGER.error("数据不对应 pSize: {} ,company {} ", positionLinkList.size(),
-     * companyLinkList.size()); }
-     */
     JSONArray positionJsonArray = new JSONArray();
-    int i = 0;
-    if (positionLinkList != null) {
-      int listSize = positionLinkList.size();
-      for (; i < listSize; i++) {
+    if (CollectionUtils.isNotEmpty(positionLinkList)) {
+      for (int i = 0; i < positionLinkList.size(); i++) {
         String positionLink = positionLinkList.get(i);
-        // 先排除需要单独处理的子域名, 如 :
-        // http://meituan.51job.com/sc/job_shuoming.php?jobid=87517160
-        // http://hundsun.51job.com/sc/show_job_detail.php?jobid=80057520
-        // http://career.dell.51job.com/jobinfo.php?jobid=83925993
+        // 先排除需要单独处理的子域名
         if (StringUtils.startsWithIgnoreCase(positionLink, "http://jobs.51job.com")) {
           String companyLink = companyLinkList.get(i);
           JSONObject json = new JSONObject();
-          json.put("positionLink", positionLink);
           json.put("companyLink", companyLink);
-          // 扒取职位信息
+          json.put("positionLink", positionLink);
+          // 处理公司详情
+          json.put(COMPANY_JSON, dealCompanyInfo(companyLink));
+          // 处理职位信息
           json.put(POSITION_JSON, dealPositionInfo(positionLink));
-          // 抓取公司详情
-          json.put(COMPANY_JSON, dealCompanyJson(companyLink));
           positionJsonArray.add(json);
         }
       }
@@ -242,16 +225,11 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
       return null;
     }
     // 职位信息获取
-    String positionId = html.xpath("//*[@id=\"hidJobID\"]").$("input", "value").get(); // id
-    Selectable companyDom = html.xpath("/html/body/div[2]/div[2]/div[2]/div/div[1]/p[1]/a");
-    String companyName = companyDom.xpath("a/text()").get(); // 公司名
-    String companyLink = companyDom.links().get();
     List<String> requirements =
         html.xpath("/html/body/div[2]/div[2]/div[3]/div[1]/div/div/span/html()").all();
     String workExp = null; // 工作经验要求
     String degree = null; // 学历要求
     String publishDate = null; // 发布时间
-    String languageRequirements = null; // 语言要求
     String majorRequirements = null; // 专业要求
     for (String element : requirements) {
       if (element.contains("i1")) {
@@ -259,92 +237,90 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
       } else if (element.contains("i2")) {
         degree = trimTag(element);
       } else if (element.contains("i4")) {
-        publishDate = trimTag(element).replaceAll("发布", "");
-      } else if (element.contains("i5")) {
-        languageRequirements = trimTag(element);
+        publishDate = new DateTime().getYear() + "-" + trimTag(element).replaceAll("发布", "");
       } else if (element.contains("i6")) {
         majorRequirements = trimTag(element);
       }
     }
-
-    String positionDesc = html.xpath("/html/body/div[2]/div[2]/div[3]/div[4]/div/text()").get();
-
+    // 职位描述
+    String positionDesc = html.xpath("/html/body/div[2]/div[2]/div[3]/div[4]/div/html()").get();
+    if (StringUtil.isNotEmpty(positionDesc)) {
+      positionDesc = trimStr(positionDesc.replaceAll("<span class=\"label\"[\\D\\d]+?</span>", "")
+          .replaceAll("<div class=\"mt10\"[\\D\\d]+?</div>", "")
+          .replaceAll("<a[\\D\\d]+?</a>", ""));
+    }
     try {
-      if (positionId != null && !StringUtils.isEmpty(positionId)) {
-        JSONObject json = new JSONObject();
-        json.put(ID, positionId);
-        json.put(POSITION_NAME,
-            html.xpath("/html/body/div[2]/div[2]/div[2]/div/div[1]/h1/text()").get());// 职位名
-        json.put(POSITION_TITLE, html.css(
-            "div.tCompanyPage > div.tCompany_center.clearfix > div.tCompany_main > div:nth-child(4) > div > div.mt10 > p:nth-child(1) > span.el")
-            .xpath("span/text()").all());// 工作职能
-        json.put(WELFARE,
-            html.xpath("/html/body/div[2]/div[2]/div[3]/div[1]/div/p/span/text()").all());// 福利标签
-        json.put(LABEL_LIST, html.css(
-            "div.tCompanyPage > div.tCompany_center.clearfix > div.tCompany_main > div:nth-child(4) > div > div.mt10 > p:nth-child(2) > span.el")
-            .xpath("span/text()").all());// 关键字(有关键字就一定有工作职能)
-        json.put(POSITION_LINK, url);
-        json.put(SOURCE, "51job");
-        json.put(WORK_EXPERIENCE, workExp);// 工作年限
-        json.put(DEGREE, degree);// 学历
-        json.put(PUBLISHED_DATE, publishDate);
-        json.put(POSITION_LANGUAGE_REQUIREMENTS, languageRequirements);
-        json.put(POSITION_MAJOR_REQUIREMENT, majorRequirements);
-        json.put(COMPANY_NAME, companyName);
-        json.put(COMPANY_LINK, companyLink);
-        json.put(WORKPLACE,
-            html.xpath("/html/body/div[2]/div[2]/div[3]/div[5]/div/p/text()").get());
-        json.put(SALARY,
-            html.xpath("/html/body/div[2]/div[2]/div[2]/div/div[1]/strong/text()").get());
-        json.put(JOB_DESC, positionDesc);
+      JSONObject json = new JSONObject();
+      json.put(POSITION_TITLE, html.css(
+          "div.tCompanyPage > div.tCompany_center.clearfix > div.tCompany_main > div:nth-child(4) > div > div.mt10 > p:nth-child(1) > span.el")
+          .xpath("span/text()").all());// 工作职能
+      json.put(WELFARE,
+          html.xpath("/html/body/div[2]/div[2]/div[3]/div[1]/div/p/span/text()").all());// 福利标签
+      json.put(LABEL_LIST, html.css(
+          "div.tCompanyPage > div.tCompany_center.clearfix > div.tCompany_main > div:nth-child(4) > div > div.mt10 > p:nth-child(2) > span.el")
+          .xpath("span/text()").all());// 关键字(有关键字就一定有工作职能)
+      json.put(POSITION_LINK, url);
+      json.put(SpiderConstantKey.SOURCE, "51job");
+      json.put(WORK_EXPERIENCE, workExp);// 工作年限
+      json.put(DEGREE, degree);// 学历
+      json.put(PUBLISHED_DATE, publishDate);
+      json.put(POSITION_MAJOR_REQUIREMENT, majorRequirements);
+      json.put("workplace_city", html.xpath("//span[@class='lname']/text()").get());
+      json.put("workplace_address",
+          html.xpath("/html/body/div[2]/div[2]/div[3]/div[5]/div/p/text()").get());
+      json.put(SALARY,
+          html.xpath("/html/body/div[2]/div[2]/div[2]/div/div[1]/strong/text()").get());
+      json.put(JOB_DESC, positionDesc);
 
-        /*
-         * if (json.getJSONArray(WELFARE) == null || json.getJSONArray(WELFARE).size() < 1) { //
-         * LOGGER.error("{} 福利标签为空===>{}", url, json.getJSONArray(WELFARE).toJSONString()); } if
-         * (StringUtil.isEmpty(json.getString(JOB_DESC))) { LOGGER.error("{} 职位描述为空===>{}", url,
-         * json.getString(JOB_DESC)); } if (StringUtil.isEmpty(json.getString(SALARY))) {
-         * LOGGER.error("{} 薪资为空===>{}", url, json.getString(SALARY)); } if
-         * (StringUtil.isEmpty(json.getString(WORKPLACE))) { LOGGER.error("{} 工作地为空===>{}", url,
-         * json.getString(WORKPLACE)); }
-         */
-        return json;
-      }
+      return json;
     } catch (Exception e) {
       LOGGER.error("获取页面失败 {}", url, e);
     }
     return null;
   }
 
-
-  private static JSONObject dealCompanyJson(String url) {
+  private static JSONObject dealCompanyInfo(String url) {
     Html html = SpiderUtil.captureHtml(url, GB2312_CHARSET);
     if (html == null) {
       return null;
     }
     // 公司信息获取
-    String companyId = html.xpath("//*[@id=\"hidCOID\"]").$("input", "value").get(); // id
-    if (companyId != null && !StringUtils.isEmpty(companyId)) {
-      JSONObject json = new JSONObject();
-      json.put(NAME, trimStr(html.xpath("/html/body/div[2]/div[2]/div[2]/div/h1/text()").get())); // 公司名
+    JSONObject json = new JSONObject();
+    try {
+      // 公司名
+      json.put(NAME, trimStr(html.xpath("/html/body/div[2]/div[2]/div[2]/div/h1/text()").get()));
+      // LOGO
       json.put(LOGO,
           trimStr(html.xpath("/html/body/div[2]/div[2]/div[2]/div/img").$("img", "src").get()));
+      // 公司地址
       json.put(COMPANY_ADDRESS,
           trimStr(html.xpath("/html/body/div[2]/div[2]/div[3]/div[2]/div/p/text()").get()));
+
       String companyIndustryString =
           trimStr(html.xpath("/html/body/div[2]/div[2]/div[2]/div/p[1]/text()").get());
       String[] industryArr = companyIndustryString.split("\\|");
-      json.put(SpiderConstantKey.Company.COMPANY_NATURE, trimStr(industryArr[0])); // 公司类型
+      // 公司类型
+      json.put(SpiderConstantKey.Company.COMPANY_NATURE, trimStr(industryArr[0]));
       if (industryArr.length == 2) {
-        json.put(SpiderConstantKey.Company.INDUSTRY, industryArr[1].split(" ")); // 公司行业
+        // 公司行业
+        json.put(SpiderConstantKey.Company.INDUSTRY, trimStr(industryArr[1]).split(" "));
       } else if (industryArr.length == 3) {
-        json.put(SpiderConstantKey.Company.COMPANY_SCALE, trimStr(industryArr[1])); // 规模
-        json.put(SpiderConstantKey.Company.INDUSTRY, industryArr[2].split(" ")); // 公司行业
+        // 规模
+        json.put(SpiderConstantKey.Company.COMPANY_SCALE, trimStr(industryArr[1]));
+        // 公司行业
+        json.put(SpiderConstantKey.Company.INDUSTRY, industryArr[2].split(" "));
       }
-      json.put(PROFILE, trimStr(
-          html.xpath("/html/body/div[2]/div[2]/div[3]/div[1]/div/div/div[1]/p/text()").get()));// 公司简介
-      // 描述
+      // 公司简介
+      String profile =
+          html.xpath("/html/body/div[2]/div[2]/div[3]/div[1]/div/div/div[1]/p/html()").get();
+      char br = 10;
+      if (StringUtil.isNotEmpty(profile)) {
+        profile = trimStr(profile).replaceAll("<br>", br + "").replaceAll("&nbsp;", "");
+      }
+      json.put(PROFILE, profile);
+      // 官网
       json.put(WEBSITE,
-          trimStr(html.xpath("/html/body/div[2]/div[2]/div[3]/div[3]/div/p/a/text()").get()));// 官网
+          trimStr(html.xpath("/html/body/div[2]/div[2]/div[3]/div[3]/div/p/a/text()").get()));
       // 办公环境
       List<String> officeEnvironmentList =
           html.xpath("//*[@id=\"divCoPoster\"]/ul/li/a/img").$("img", "src").all();
@@ -355,10 +331,12 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
       }
       json.put(OFFICE_ENVIRONMENT, officeEnvironmentList);
       json.put(COMPANY_LINK, url);
-      json.put(SOURCE, "51job");// 数据来源
-      return json;
+    } catch (Exception e) {
+      LOGGER.error("获取页面失败 {}", url, e);
     }
-    return null;
+    // 数据来源
+    json.put(SOURCE, "51job");
+    return json;
   }
 
   // <editor-fold desc="定义地区 行业 工作职能等数据字典">
@@ -372,12 +350,12 @@ public class BaseJob51PositionProcessor extends SpiderUtil {
   private static final String[] provinceValueData = {"330000", "340000", "350000", "01", "320000",
       "310000", "300000", "290000", "280000", "270000", "260000", "250000", "240000", "230000",
       "220000", "210000", "200000", "190000", "170000", "160000", "150000", "140000", "130000",
-      "120000", "110000", "100000", "060000", "050000",};
+      "120000", "110000", "100000", "060000", "050000"};
 
 
   /* 51job 热门省份和直辖市 */
   private static final String[] provinceValueData_hot =
-      {"030000", "070000", "080000", "090000", "180000", "010000", "020000",};
+      {"030000", "070000", "080000", "090000", "180000", "010000", "020000"};
 
   /* 51job所有地区编号 */
   private static final String[] areaValueData = {"010000", "010100", "010200", "010300", "010400",
